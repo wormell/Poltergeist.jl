@@ -2,11 +2,11 @@ module GhostCoop
   using Base, ApproxFun#, Compat, FastTransforms
 
 import Base: values,getindex,setindex!,*,.*,+,.+,-,.-,==,<,<=,>,|,
-                >=,./,/,.^,^,\,∪,transpose, size
-import ApproxFun: domainspace, rangespace
+>=,./,/,.^,^,\,∪,transpose, size, length, issymmetric#, maximum, minimum
+import ApproxFun: domainspace, rangespace, israggedbelow, RaggedMatrix, resizedata!, colstop, CachedOperator, Infinity
 
-
+include("general.jl")
 include("MarkovMap.jl")
-include("TransferOperator.jl")
+include("Transfer.jl")
 
 end # module
