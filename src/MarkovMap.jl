@@ -26,14 +26,14 @@ immutable MarkovMap{D<:Domain,R<:Domain,T,ff} <: AbstractMarkovMap{D,R,T,ff}
         @assert all(bl.<bu)
         @assert sum(bu-bl) <= arclength(dom)
             # assert branches non-overlapping, in D,...
-        new(dom,ran,f,bl,bu,sgns)
+        new{typeof(dom),typeof(ran),T,typeof(f)}(dom,ran,f,bl,bu,sgns)
     end
 end
 
 length(m::MarkovMap) = length(m.bl)
 
 
-immutable InverseDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: DerivativeMarkovMap{D,R,T,FF}
+immutable InverseDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: AbstractDerivativeMarkovMap{D,R,T,FF}
     domain::D
     rangedomain::R
     v::Vector{FF} #branches of inverse
@@ -58,10 +58,15 @@ function InverseDerivativeMarkovMap{FF}(dom::Domain,ran::Domain,v::Vector{FF},dv
 end
 
 length(m::InverseDerivativeMarkovMap) = length(m.v)
-call(m::InverseDerivativeMarkovMap,:v) = m.v
-call(m::InverseDerivativeMarkovMap,:dvdx) = m.dvdx
+function getindex(m::InverseDerivativeMarkovMap,d::Symbol)
+    d==:v && return m.v
+    d==:dvdx && return m.dvdx
 
-for TYP in (:FunctionMarkovMap,:InverseDerivativeMarkovMap)
+    error("Symbol not recognised")
+end
+#getindex(m::InverseDerivativeMarkovMap,:dvdx) = m.dvdx
+
+for TYP in (:MarkovMap,:InverseDerivativeMarkovMap)
     @eval ApproxFun.domain(m::$TYP) = m.domain
     @eval rangedomain(m::$TYP) = m.rangedomain
 end
