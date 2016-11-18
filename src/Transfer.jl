@@ -38,9 +38,8 @@ end
 
 getmap(L::ConcreteTransfer) = L.m
 
-Base.show(io::IO,L::AbstractTransfer) = print(io,typeof(L)) #temporary
-
 Transfer{T}(::Type{T},m::AbstractMarkovMap) = cache(ConcreteTransfer(T,m),padding=true)
+Transfer(m::AbstractMarkovMap) = cache(ConcreteTransfer(eltype(m),m),padding=true)
 
 function resizecolstops!(L::ConcreteTransfer,n)
   colstopslength = length(L.colstops)
@@ -59,7 +58,7 @@ function transferfunction{TT,D}(x,L::ConcreteTransfer{TT,Chebyshev{D}},k::Intege
   y = zero(x);
 
   for i = 1:length(L.m)
-    y += getmap(L)[:dvdx][i](x).*chebyTk(getmap(L)[:v][i](x),domain(L),k)
+    y += markovDsign(getmap(L),i) * markovinvD(getmap(L),i,x).*chebyTk(markovinv(getmap(L),i,x),domain(L),k)
   end;
   abs(y) < 20k*eps(one(abs(y))) ? zero(y) : y
 end
@@ -69,7 +68,7 @@ function transferfunction{TT,D}(x,L::ConcreteTransfer{TT,Fourier{D}},k::Integer,
   y = zero(x);
 
   for i = 1:Base.length(L.m)
-    y += getmap(L)[:dvdx][i](x).*fourierCSk(getmap(L)[:v][i](x),domain(L),k)
+    y += markovDsign(getmap(L),i) * markovinvD(getmap(L),i,x).*fourierCSk(markovinv(getmap(L),i,x),domain(L),k)
   end;
   abs(y) < 20k*eps(one(abs(y))) ? zero(y) : y
 
@@ -81,7 +80,7 @@ function default_transferfunction{TT,DD}(x,L::ConcreteTransfer{TT,DD},kk::Intege
   fn = Fun([zeros(T,kk-1);one(T)],domainspace(L));
 
   for i = 1:Base.length(L.m)
-    y += getmap(L)[:dvdx][i](x).*fn(getmap(L)[:v][i](x))
+    y += markovDsign(getmap(L),i) * markovinvD(getmap(L),i,x).*fn(markovinv(getmap(L),i,x))
   end;
   abs(y) < 200eps(one(abs(y))) ? zero(y) : y
 end
@@ -89,7 +88,13 @@ transferfunction(x,L,kk,T) = default_transferfunction(x,L,kk,T)
 
 # Indexing
 
-function transfer_getindex{T,D,R,M<:InverseDerivativeMarkovMap}(L::ConcreteTransfer{T,D,R,M},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range)
+transferfunction_nodes{TT,D,R,M<:AbstractMarkovMap}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
+  [transferfunction(p,L,kk,T) for p in points(rangespace(L),n)]
+transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
+  [transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),L,kk,T) for k = 1:n]
+
+
+function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range)
   #T = eltype(getmap(L))
   dat = Array(T,0)
   cols = Array(eltype(k),Base.length(k)+1)
@@ -104,70 +109,70 @@ function transfer_getindex{T,D,R,M<:InverseDerivativeMarkovMap}(L::ConcreteTrans
   for (kind,kk) in enumerate(k)
     kind > 1 && (mc = max(mc,maximum(L.colstops[k[kind-1]+1:kk])))
 
-    f(x) = transferfunction(x,L,kk,T)
+#    f(x) = transferfunction(x,L,kk,T)
     tol =T==Any?200eps():200eps(T)
 
     if L.colstops[kk] >= 1
-      cf = Fun(f,rs,convert(Int,2^max(4,ceil(log2(L.colstops[kk])))))
+      coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^max(4,convert(Int,ceil(log2(L.colstops[kk])))),kk,T))
+      maxabsc = maxabs(coeffs)
+      chop!(coeffs,tol*maxabsc*log2(length(coeffs))/10)
     elseif L.colstops[kk]  == 0
-      cf = zeros(rs)
-
+      coeffs = [0.]
     else
 
-      if mc ≤ 2^4
-        cf = Fun(f,rs)
-      else
-        # code from ApproxFun (src/Fun/constructors.jl) - the difference is we start at n \approx mc
+      #       if mc ≤ 2^4
+      #         coeffs = Fun(f,rs).coefficients
+      #       else
+      # code from ApproxFun (src/Fun/constructors.jl) - the difference is we start at n \approx mc
 
-        r=ApproxFun.checkpoints(rs)
-        fr=map(f,r)
-        maxabsfr=norm(fr,Inf)
+      r=ApproxFun.checkpoints(rs)
+      fr=[transferfunction(rr,L,kk,T) for rr in r]
+      maxabsfr=norm(fr,Inf)
 
-        logn = min(convert(Int,ceil(log2(mc))),20)
-        while logn < 21
-          cf = Fun(f,rs,2^logn)
+      logn = min(convert(Int,ceil(log2(max(mc,16)))),20)
+      while logn < 21
+        coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
 
-          maxabsc = maxabs(cf.coefficients)
-          if maxabsc == 0 && maxabsfr == 0
-            cf = (zeros(rs))
+        maxabsc = maxabs(coeffs)
+        if maxabsc == 0 && maxabsfr == 0
+          coeffs = [0.]
+          break
+        else
+          b = ApproxFun.block(rs,length(coeffs))
+          bs = ApproxFun.blockstart(rs,max(b-2,1))
+          if length(coeffs) > 8 && maxabs(coeffs[bs:end]) < tol*maxabsc*logn &&
+              all(kkk->norm(Fun(coeffs,rs)(r[kkk])-fr[kkk],1)<tol*length(coeffs)*maxabsfr*1000,1:length(r))
+            chop!(coeffs,tol*maxabsc*logn/10)
             break
-          else
-            b = ApproxFun.block(rs,length(cf.coefficients))
-            bs = ApproxFun.blockstart(rs,max(b-2,1))
-            if ncoefficients(cf) > 8 && maxabs(cf.coefficients[bs:end]) < tol*maxabsc &&
-                all(kkk->norm(cf(r[kkk])-fr[kkk],1)<tol*length(cf.coefficients)*maxabsfr*1000,1:length(r))
-              cf =  chop!(cf,tol*maxabsc/10)
-              break
-            end
           end
-          logn += 1
         end
-
-        if logn == 21
-          warn("Maximum number of coefficients "*string(2^20+1)*" reached in constructing Fun.")
-          Fun(f,rs,2^21)
-        end
-
+        logn += 1
       end
+
+      if logn == 21
+        warn("Maximum number of coefficients "*string(2^20+1)*" reached in constructing $(k)th column.")
+        coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
+      end
+
     end
 
     #    tol = 4ceil(log2(length(tk.coefficients)))*eps(T) # 4 is dummy should be like 1 in Fourier, 2C+1 in Cheby
     #    chop!(tk,tol)
-    maxabsc = maxabs(cf.coefficients)
-    lcfc = length(cf.coefficients)
+    maxabsc = maxabs(coeffs)
+    lcfc = length(coeffs)
 
     for i = 1:lcfc
-      abs(cf.coefficients[i])<tol*maxabsc/10 && (cf.coefficients[i] = 0)
+      abs(coeffs[i])<tol*maxabsc*log2(lcfc)/10 && (coeffs[i] = 0)
     end
 
-    cutcfc = cf.coefficients[(jdat[1]:jdat[2]:min(lcfc,jdat[3]))::Range]
+    cutcfc = coeffs[(jdat[1]:jdat[2]:min(lcfc,jdat[3]))::Range]
 
     append!(dat,cutcfc)
     cols[kind+1] = cols[kind]+length(cutcfc)
     K = max(K,length(cutcfc))
 
     setcolstops!(L,kk,lcfc)
- #   kk == 1 && display(stacktrace())
+    #   kk == 1 && display(stacktrace())
   end
   RaggedMatrix(dat,cols,K)
 end
@@ -180,8 +185,8 @@ Base.getindex(L::ConcreteTransfer,j::Integer,k::Range) = Base.getindex(L,j:j,k).
 Base.getindex(L::ConcreteTransfer,j::Range,k::Integer) = Base.getindex(L,j,k:k).data
 
 function ApproxFun.default_raggedmatrix{T,LL<:AbstractTransfer,R1<:Union{Range,ApproxFun.AbstractCount},R2<:Range}(
-  S::ApproxFun.SubOperator{T,LL,Tuple{R1,R2}})
- Base.getindex(parent(S),parentindexes(S)[1],parentindexes(S)[2])
+    S::ApproxFun.SubOperator{T,LL,Tuple{R1,R2}})
+  Base.getindex(parent(S),parentindexes(S)[1],parentindexes(S)[2])
 end
 
 
