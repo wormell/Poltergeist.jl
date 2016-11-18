@@ -47,7 +47,7 @@ function interval_newton{T}(f,df,y::Number,da::T,db::T,tol=10eps(max(abs(da),abs
   abs(rem) > tol && error("Newton: failure to converge")
   x
 end
-
+interval_newton(f,df,y::Number,D::Domain,tol=10eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,tol)
 # function interval_newton{T}(f,y::Number,da::T,db::T,tol=10eps(max(abs(da),abs(db))))
 #   x = da+(db-da)*rand(typeof(y))
 #   rem = f(x)-y

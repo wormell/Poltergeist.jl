@@ -25,11 +25,13 @@ immutable ConcreteTransfer{T,D<:Space,R<:Space,M<:AbstractMarkovMap} <: Abstract
   function ConcreteTransfer(m::AbstractMarkovMap,domainspace::Space,rangespace::Space)
     @assert domain(m)==domain(domainspace)
     @assert rangedomain(m)==domain(rangespace)
+    nneutral(m) != 0 && error("Neutral fixed points not supported for transfer operator")
     new{eltype(m),typeof(domainspace),typeof(rangespace),typeof(m)}(m,domainspace,rangespace,eltype(M)[])
   end
 end
 
-ConcreteTransfer{T}(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),ran::Space=Space(rangedomain(m)))=
+ConcreteTransfer{T}(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
+                    ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) =
   ConcreteTransfer{T,typeof(dom),typeof(ran),typeof(m)}(m,dom,ran)#,domainspace(m),rangespace(m))
 
 for OP in (:domainspace,:rangespace)
@@ -38,8 +40,10 @@ end
 
 getmap(L::ConcreteTransfer) = L.m
 
-Transfer{T}(::Type{T},m::AbstractMarkovMap) = cache(ConcreteTransfer(T,m),padding=true)
-Transfer(m::AbstractMarkovMap) = cache(ConcreteTransfer(eltype(m),m),padding=true)
+Transfer{T}(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
+                    ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) = cache(ConcreteTransfer(T,m,dom,ran),padding=true)
+Transfer(m::AbstractMarkovMap,dom::Space=Space(domain(m)),
+                    ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) = cache(ConcreteTransfer(eltype(m),m,dom,ran),padding=true)
 
 function resizecolstops!(L::ConcreteTransfer,n)
   colstopslength = length(L.colstops)
@@ -57,8 +61,13 @@ chebyTk(x,d,k::Integer) = cos((k-1)*acos(tocanonical(d,x))) #roundoff error grow
 function transferfunction{TT,D}(x,L::ConcreteTransfer{TT,Chebyshev{D}},k::Integer,T)
   y = zero(x);
 
-  for i = 1:length(L.m)
-    y += markovDsign(getmap(L),i) * markovinvD(getmap(L),i,x).*chebyTk(markovinv(getmap(L),i,x),domain(L),k)
+  for b in branches(getmap(L))
+    if isa(b,FwdExpandingBranch)
+      mapinvx = mapinv(b,x)
+      y += abs(1/unsafe_mapD(b,mapinvx)).*chebyTk(mapinvx,domain(L),k)
+    else
+      y += abs(mapinvD(b,x)).*chebyTk(mapinv(b,x),domain(L),k)
+    end
   end;
   abs(y) < 20k*eps(one(abs(y))) ? zero(y) : y
 end
@@ -67,8 +76,13 @@ fourierCSk(x,d,k::Integer) = rem(k,2) == 1 ? cos(fld(k,2)*tocanonical(d,x)) : si
 function transferfunction{TT,D}(x,L::ConcreteTransfer{TT,Fourier{D}},k::Integer,T)
   y = zero(x);
 
-  for i = 1:Base.length(L.m)
-    y += markovDsign(getmap(L),i) * markovinvD(getmap(L),i,x).*fourierCSk(markovinv(getmap(L),i,x),domain(L),k)
+  for b in branches(getmap(L))
+    if isa(b,FwdExpandingBranch)
+      mapinvx = mapinv(b,x)
+      y += abs(1/unsafe_mapD(b,mapinvx)).*fourierCSk(mapinvx,domain(L),k)
+    else
+      y += abs(mapinvD(b,x)).*fourierCSk(mapinv(b,x),domain(L),k)
+    end
   end;
   abs(y) < 20k*eps(one(abs(y))) ? zero(y) : y
 
@@ -79,9 +93,15 @@ function default_transferfunction{TT,DD}(x,L::ConcreteTransfer{TT,DD},kk::Intege
   y = zero(x);
   fn = Fun([zeros(T,kk-1);one(T)],domainspace(L));
 
-  for i = 1:Base.length(L.m)
-    y += markovDsign(getmap(L),i) * markovinvD(getmap(L),i,x).*fn(markovinv(getmap(L),i,x))
+  for b in branches(getmap(L))
+    if isa(b,FwdExpandingBranch)
+      mapinvx = mapinv(b,x)
+      y += abs(1/unsafe_mapD(b,mapinvx)).*fn(mapinvx)
+    else
+      y += abs(mapinvD(b,x)).*fn(mapinv(b,x))
+    end
   end;
+
   abs(y) < 200eps(one(abs(y))) ? zero(y) : y
 end
 transferfunction(x,L,kk,T) = default_transferfunction(x,L,kk,T)
@@ -109,7 +129,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
   for (kind,kk) in enumerate(k)
     kind > 1 && (mc = max(mc,maximum(L.colstops[k[kind-1]+1:kk])))
 
-#    f(x) = transferfunction(x,L,kk,T)
+    #    f(x) = transferfunction(x,L,kk,T)
     tol =T==Any?200eps():200eps(T)
 
     if L.colstops[kk] >= 1
