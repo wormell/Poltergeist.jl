@@ -41,9 +41,9 @@ end
 getmap(L::ConcreteTransfer) = L.m
 
 Transfer{T}(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
-                    ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) = cache(ConcreteTransfer(T,m,dom,ran),padding=true)
+            ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) = cache(ConcreteTransfer(T,m,dom,ran),padding=true)
 Transfer(m::AbstractMarkovMap,dom::Space=Space(domain(m)),
-                    ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) = cache(ConcreteTransfer(eltype(m),m,dom,ran),padding=true)
+         ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) = cache(ConcreteTransfer(eltype(m),m,dom,ran),padding=true)
 
 function resizecolstops!(L::ConcreteTransfer,n)
   colstopslength = length(L.colstops)
@@ -114,13 +114,13 @@ transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,
   [transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),L,kk,T) for k = 1:n]
 
 
-function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range)
+function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range,padding::Bool=false)
   #T = eltype(getmap(L))
   dat = Array(T,0)
   cols = Array(eltype(k),Base.length(k)+1)
   cols[1] = 1
   K = isfinite(jdat[3]) ? length(jdat[1]:jdat[2]:jdat[3]) : 0 # largest colstop
-
+  padding && start(k) > 1 && (K = max(maximum([colstop(L,i) for i =1:start(k)-1]),K))
   rs = rangespace(L)
 
   resizecolstops!(L,maximum(k))
@@ -187,9 +187,10 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
 
     cutcfc = coeffs[(jdat[1]:jdat[2]:min(lcfc,jdat[3]))::Range]
 
+    K = max(K,length(cutcfc))
+    padding && ApproxFun.pad!(cutcfc,K)
     append!(dat,cutcfc)
     cols[kind+1] = cols[kind]+length(cutcfc)
-    K = max(K,length(cutcfc))
 
     setcolstops!(L,kk,lcfc)
     #   kk == 1 && display(stacktrace())
@@ -215,4 +216,21 @@ function ApproxFun.colstop(L::ConcreteTransfer,k::Integer)
   k <= length(L.colstops) && L.colstops[k] != -1 && return L.colstops[k]
   transfer_getindex(L,(1,1,ApproxFun.∞),k:k)
   L.colstops[k]
+end
+
+function ApproxFun.resizedata!{T,D<:Domain,R<:Domain,M<:AbstractMarkovMap}(co::ApproxFun.CachedOperator{T,ApproxFun.RaggedMatrix{T},ConcreteTransfer{T,D,R,M}},::Colon,n::Integer)
+  if n > co.datasize[2]
+    RO = transfer_getindex(co.op,(1,1,ApproxFun.∞),(co.datasize[2]+1):n,padding)
+    if co.datasize[2] == 0
+      co.data = RO
+      co.datasize = (co.data.K,n)
+    else
+      append!(co.data.data,RO.data)
+      append!(co.data.cols,RO.cols[2:end]+co.data.cols[end])
+      co.data.K = max(co.data.K,RO.K)
+      co.datasize = (co.data.K,n)
+    end
+  end
+
+  co
 end

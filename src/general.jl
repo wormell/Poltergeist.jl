@@ -5,7 +5,10 @@ for optype in (:(ApproxFun.InterlaceOperator),:(ApproxFun.PlusOperator),:(Approx
   eval(:(containstransfer(M::$optype) = any(containstransfer,M.ops)))
 end
 
+# Overloads
+
 #ApproxFun.qrfact(A::ApproxFun.QROperator) = A
+# rem()
 
 # InterpolationNode
 
@@ -61,3 +64,12 @@ interval_newton(f,df,y::Number,D::Domain,tol=10eps(max(abs(D.a),abs(D.b)))) = in
 #   abs(rem) > tol && error("Newton: failure to converge")
 #   x
 # end
+
+
+# ForwardDiff
+function forwarddiff(f)
+  function dfdx(x)
+    ForwardDiff.derivative(f,x)::typeof(x)
+  end
+  dfdx
+end
