@@ -16,7 +16,7 @@ immutable FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
   dfdx::gg
   domain::D
   rangedomain::R
-#  sgn::T
+  #  sgn::T
   function FwdExpandingBranch(fc,dfdxc,dom,ran)
     ~isempty(∂(ran)) && @assert all([in(fc(p),∂(ran)) for p in ∂(dom)])
     new(fc,dfdxc,dom,ran)
@@ -67,7 +67,7 @@ function branch{ff,gg,D<:Domain,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},doms
   ftype = promote_type([typeof(f) for f in fs]...)
   dfdxtype = promote_type([typeof(f) for f in dfdxs]...)
   TYP = dir=="fwd" ? FwdExpandingBranch{ftype,dfdxtype,D,R} : #eltype(doms),typeof(ran)
-    RevExpandingBranch{ftype,dfdxtype,D,R}
+  RevExpandingBranch{ftype,dfdxtype,D,R}
   TYP[branch(fs[i],dfdxs[i],doms[i],ran,dir,ftype,dfdxtype) for i = 1:length(fs)]
 end
 function branch{ff,gg,T<:Number,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},bl::Vector{T},bu::Vector{T},ran::R,dir::String="fwd")
@@ -81,6 +81,15 @@ function branch{ff,gg,T<:Number,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},b::V
   @assert issorted(b)
   branch(fs,dfdxs,ApproxFun.Interval{T}[Interval(b[i],b[i+1]) for i = 1:length(b)-1],ran,dir)
 end
+
+branch{ff,T<:Union{Number,Domain}}(fs::Vector{ff},b::Vector{T},args...) =
+  branch(fs,[forwarddiff(f) for f in fs],b,args...)
+branch{T<:Union{Number,Domain}}(f,b::T,args...) = branch(f,forwarddiff(f),b,args...)
+
+branch{ff<:Fun,T<:Union{Number,Domain}}(fs::Vector{ff},b::Vector{T},args...) =
+  branch(fs,[f' for f in fs],b,args...)
+branch{T<:Union{Number,Domain}}(f::Fun,b::T,args...) = branch(f,f',b,args...)
+
 
 # MarkovMaps
 
@@ -114,13 +123,18 @@ MarkovMap{D<:Domain,R<:Domain,B<:MarkovBranch}(dom::D,ran::R,branches::Vector{B}
 #   MarkovMap{T,ff}(dom,ran,f,dfdx,bl,bu)
 
 function MarkovMap{D<:Domain,R<:Domain}(
-    dom::D,ran::R,f::Vector,dfdx::Vector,b::Vector,dir::String="fwd")
-  MarkovMap(dom,ran,branch(f,dfdx,b,ran,dir))
+    dom::D,ran::R,v1::Vector,v2::Vector,dir::String="fwd")
+  MarkovMap(dom,ran,branch(v1,v2,ran,dir))
 end
 function MarkovMap{D<:Domain,R<:Domain}(
-    dom::D,ran::R,f::Vector,dfdx::Vector,b1::Vector,b2::Vector,dir::String="fwd")
-  MarkovMap(dom,ran,branch(f,dfdx,b1,b2,ran,dir))
+    dom::D,ran::R,v1::Vector,v2::Vector,v3::Vector,dir::String="fwd")
+  MarkovMap(dom,ran,branch(v1,v2,v3,ran,dir))
 end
+function MarkovMap{D<:Domain,R<:Domain}(
+    dom::D,ran::R,v1::Vector,v2::Vector,v3::Vector,v4::Vector,dir::String="fwd")
+  MarkovMap(dom,ran,branch(v1,v2,v3,v4,ran,dir))
+end
+
 
 # TODO: maybe roll into branch constructors? maybe remove??
 function MarkovMap{D,R,ff}(
