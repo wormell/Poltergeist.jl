@@ -39,6 +39,8 @@ using Plots
 plot(ρ)
 ```
 <!--- plot!(linearresponse(L,Fun(x->x*(1-x),d))) --->
+<img src=https://github.com/johnwormell/GhostCoop.jl/raw/master/images/acim.png width=500 height=400>
+
 These have spectral accuracy: one can calculate acims to 15 digits of accuracy in a fraction of a second:
 
 ```julia
