@@ -32,3 +32,29 @@ end
 (bi::MarkovBranchDerivativeInverse)(x::Number) = mapinvD(bd.b,x)
 Base.ctranspose(bi::MarkovBranchInverse) = MarkovBranchDerivativeInverse(bi.b)
 
+function plot(m::MarkovMap)
+  pts = eltype(m)[]
+  vals = eltype(m)[]
+  sp = sortperm([minimum(∂(domain(b))) for b in branches(m)])
+  for b in branches(m)[sp]
+    append!(pts,points(domain(b),100))
+    append!(vals,broadcast(b,points(domain(b),100)))
+  end
+  p = PyPlot.plot(pts,vals)
+  xlim(∂(domain(m)))
+  ylim(∂(rangedomain(m)))
+  xlabel("\$x\$")
+  ylabel("\$f(x)\$")
+  p
+end
+
+function plot(m::AbstractMarkovMap)
+  pts = points(domain(m),500)
+  vals = broadcast(m,pts)
+  p = PyPlot.plot(pts,vals)
+  xlim(∂(domain(m)))
+  ylim(∂(rangedomain(m)))
+  xlabel("\$x\$")
+  ylabel("\$f(x)\$")
+  p
+end
