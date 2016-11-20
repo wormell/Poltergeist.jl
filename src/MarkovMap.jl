@@ -1,4 +1,4 @@
-export MarkovMap, branch, nbranches
+export MarkovMap, branch, nbranches, induce
 
 # MarkovBranch
 
@@ -29,6 +29,7 @@ mapinv(b::FwdExpandingBranch,x::Number) = interval_newton(b.f,b.dfdx,x,b.domain)
 mapinvD(b::FwdExpandingBranch,x::Number) = 1/b.dfdx(mapinv(b,x))
 function mapinvP(b::FwdExpandingBranch,x::Number)
   vx = mapinv(b,x)
+  ~in(vx,b.domain) && print(vx,b.domain)
   (vx,1/mapD(b,vx))
 end
 

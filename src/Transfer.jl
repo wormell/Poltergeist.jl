@@ -58,42 +58,83 @@ function setcolstops!(L::ConcreteTransfer,inds,vals) #should be generic range/co
   L.colstops[inds] = vals
 end
 
+
+
+# transferbranch
+
 chebyTk(x,d,k::Integer) = cos((k-1)*acos(tocanonical(d,x))) #roundoff error grows linearly(??) with k may not be bad wrt x too
-function transferfunction{TT,D}(x,b::MarkovBranch,L::ConcreteTransfer{TT,Chebyshev{D}},k::Integer,T)
+chebyTk_int(x,d,k::Integer) = (k*chebyTk(x,d,k+1) - tocanonical(d,x)*chebyTk(x,d,k))/(k^2-1)/tocanonicalD(d,x)
+function transferbranch(x,b::MarkovBranch,d::Chebyshev,k::Integer,T)
   (v,dvdx) = mapinvP(b,x)
-  abs(dvdx).*chebyTk(v,domain(L),k)
+  abs(dvdx).*chebyTk(v,domain(d),k)
+end
+function transferbranch_int{D}(x,y,b::MarkovBranch,d::Chebyshev{D},k::Integer,T)
+  vy = mapinv(b,y); vx = mapinv(b,x)
+  sgn = sign((vy-vx)/(y-x))
+  sgn*(chebyTk_int(y,domain(d),k) - chebyTk_int(x,domain(d),k))
 end
 
 fourierCSk(x,d,k::Integer) = rem(k,2) == 1 ? cos(fld(k,2)*tocanonical(d,x)) : sin(fld(k,2)*tocanonical(d,x))
-function transferfunction{TT,D}(x,b::MarkovBranch,,L::ConcreteTransfer{TT,Fourier{D}},k::Integer,T)
+function fourierCSk_int(x,d,k::Integer)
+  k == 1 && return x
+  (rem(k,2) == 1 ? -sin(fld(k,2)*tocanonical(d,x)) : cos(fld(k,2)*tocanonical(d,x)))/
+    fld(k,2)/tocanonicalD(d,x)
+end
+function transferbranch{D}(x,b::MarkovBranch,d::Fourier{D},k::Integer,T)
   (v,dvdx) = mapinvP(b,x)
-  abs(dvdx).*fourierCSk(v,domain(L),k)
+  abs(dvdx).*fourierCSk(v,domain(d),k)
+end
+function transferbranch_int{D}(x,y,b::MarkovBranch,d::Fourier{D},k::Integer,T)
+  vy = mapinv(b,y); vx = mapinv(b,x)
+  sgn = sign((vy-vx)/(y-x))
+  sgn*(fourierCSk_int(y,domain(d),k) - fourierCSk_int(x,domain(d),k))
 end
 
 
-function default_transferbranch{TT,DD}(x,b::MarkovBranch,L::ConcreteTransfer{TT,DD},kk::Integer,T)
-  fn = Fun([zeros(T,kk-1);one(T)],domainspace(L));
+function default_transferbranch(x,b::MarkovBranch,d::Space,k::Integer,T)
+  fn = Fun([zeros(T,k-1);one(T)],d);
   (v,dvdx) = mapinvP(b,x)
-  abs(dvdx).*fn(v,domain(L),k)
+  abs(dvdx).*fn(v)
 end
-transferbranch(x,L,kk,T) = default_transferbranch(x,L,kk,T)
+function default_transferbranch_int(x,y,b::MarkovBranch,d::Space,k::Integer,T)
+  fn = cumsum(Fun([zeros(T,k-1);one(T)],d))
+  vy = mapinv(b,y); vx = mapinv(b,x)
+  sgn = sign((vy-vx)/(y-x))
+  sgn*(fn(vy)-fn(vx))
+end
 
-function transferfunction{TT,D}(x,L::ConcreteTransfer{TT,Chebyshev{D}},k::Integer,T)
+transferbranch(x,b,d,kk,T) = default_transferbranch(x,b,d,kk,T)
+transferbranch_int(x,y,b,d,kk,T) = default_transferbranch_int(x,y,b,d,kk,T)
+
+# Transfer function gives you values of LT(x)
+
+function transferfunction(x,m::MarkovMap,d::Space,k::Integer,T)
   y = zero(x);
 
-  for b in branches(getmap(L))
-    y += transferbranch(x,b,L,k,T)
+  for b in branches(m)
+    y += transferbranch(x,b,d,k,T)
   end;
   abs(y) < 20k*eps(one(abs(y))) ? zero(y) : y
 end
+
+function transferfunction_int(x,y,m::MarkovMap,d::Space,k::Integer,T)
+  q = zero(x);
+
+  for b in branches(m)
+    q += transferbranch_int(x,y,b,d,k,T)
+  end;
+#  abs(y) < 20k*eps(one(abs(y))) ? zero(y) : y
+  q
+end
+
 
 
 # Indexing
 
 transferfunction_nodes{TT,D,R,M<:AbstractMarkovMap}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
-  T[transferfunction(p,L,kk,T) for p in points(rangespace(L),n)]
+  T[transferfunction(p,getmap(L),domainspace(L),kk,T) for p in points(rangespace(L),n)]
 transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
-  T[transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),L,kk,T) for k = 1:n]
+  T[transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),getmap(L),domainspace(L),kk,T) for k = 1:n]
 
 
 function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range,padding::Bool=false)
@@ -128,7 +169,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       # code from ApproxFun (src/Fun/constructors.jl) - the difference is we start at n \approx mc
 
       r=ApproxFun.checkpoints(rs)
-      fr=[transferfunction(rr,L,kk,T) for rr in r]
+      fr=[transferfunction(rr,getmap(L),domainspace(L),kk,T) for rr in r]
       maxabsfr=norm(fr,Inf)
 
       logn = min(convert(Int,ceil(log2(max(mc,16)))),20)
