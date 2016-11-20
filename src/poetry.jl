@@ -1,3 +1,4 @@
+export acim, linearresponse, correlationsum
 
 acim(S::SchurInvWrapper) = S.op\S.u
 acim(L::Operator,u::Fun=uniform(domainspace(L))) = SchurInv(L,u)\u
@@ -16,7 +17,7 @@ immutable MarkovBranchDerivative{B<:MarkovBranch}
   b::B
 end
 (bd::MarkovBranchDerivative)(x::Number) = mapD(bd.b,x)
-ctranspose(b::MarkovBranch) = MarkovBranchDerivative(b)
+Base.ctranspose(b::MarkovBranch) = MarkovBranchDerivative(b)
 
 immutable MarkovBranchInverse{B<:MarkovBranch}
   b::B
@@ -29,5 +30,5 @@ immutable MarkovBranchDerivativeInverse{B<:MarkovBranch}
   b::B
 end
 (bi::MarkovBranchDerivativeInverse)(x::Number) = mapinvD(bd.b,x)
-ctranspose(bi::MarkovBranchInverse) = MarkovBranchDerivativeInverse(bi.b)
+Base.ctranspose(bi::MarkovBranchInverse) = MarkovBranchDerivativeInverse(bi.b)
 

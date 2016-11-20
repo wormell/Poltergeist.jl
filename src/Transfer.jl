@@ -1,3 +1,5 @@
+export Transfer
+
 abstract AbstractTransfer{T} <: Operator{T}
 
 ApproxFun.israggedbelow(L::AbstractTransfer) = true
@@ -7,7 +9,6 @@ Base.issymmetric(L::AbstractTransfer) = false
 #    @eval $OP(L::AbstractTransfer) = $OP(getmap(L))
 #end
 
-export Transfer
 Transfer(stuff...) = cache(ConcreteTransfer(stuff...))
 
 # fast colstop for transfer operators
