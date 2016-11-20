@@ -56,9 +56,9 @@ end
 interval_newton(f,df,y::Number,D::Domain,tol=10eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,tol)
 
 function disc_newton{T}(f,df,y::Number,rad::T,tol=10eps(rad))
-  x = rad*rand()
+  x = convert(typeof(y),rad*rand(typeof(real(y))))
   rem = f(x) - y
-  for i = 1:2log2(-200log(eps(typeof(y))))
+  for i = 1:2log2(-200log(eps(typeof(real(y)))))
     x -= rem / df(x)
     rem = f(x) - y
     abs(rem) < tol && break
