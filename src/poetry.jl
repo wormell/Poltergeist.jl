@@ -2,14 +2,14 @@ export acim, linearresponse, correlationsum
 
 acim(S::SchurInvWrapper) = S.op\S.u
 acim(L::Operator,u::Fun=uniform(domainspace(L))) = SchurInv(L,u)\u
-acim(M::MarkovMap) = acim(Transfer(M))
+acim(M::AbstractMarkovMap) = acim(Transfer(M))
 
 linearresponse(S::SchurInvWrapper,X::Fun) = S\(-acim(S)*X)'
 correlationsum(S::SchurInvWrapper,A::Fun) = S\(acim(S)*A)
 
 for OP in (:linearresponse,:correlationsum)
   @eval $OP(L::Operator,X::Fun) = $OP(SchurInv(L),X)
-  @eval $OP(M::MarkovMap,X::Fun) = $OP(Transfer(M),X)
+  @eval $OP(M::AbstractMarkovMap,X::Fun) = $OP(Transfer(M),X)
 end
 
 # Markov derivatives
@@ -18,6 +18,7 @@ immutable MarkovBranchDerivative{B<:MarkovBranch}
 end
 (bd::MarkovBranchDerivative)(x::Number) = mapD(bd.b,x)
 Base.ctranspose(b::MarkovBranch) = MarkovBranchDerivative(b)
+# Base.transpose(b::MarkovBranch) = MarkovBranchDerivative(b)
 
 immutable MarkovBranchInverse{B<:MarkovBranch}
   b::B
@@ -31,7 +32,16 @@ immutable MarkovBranchDerivativeInverse{B<:MarkovBranch}
 end
 (bi::MarkovBranchDerivativeInverse)(x::Number) = mapinvD(bd.b,x)
 Base.ctranspose(bi::MarkovBranchInverse) = MarkovBranchDerivativeInverse(bi.b)
+# Base.transpose(b::MarkovBranch) = MarkovBranchDerivative(b)
 
+immutable MarkovMapDerivative{M<:MarkovMap}
+  m::M
+end
+(md::MarkovMapDerivative)(x::Number) = mapD(md.m,x)
+Base.ctranspose(b::MarkovMap) = MarkovMapDerivative(b)
+
+
+# plotting
 function plot(m::MarkovMap)
   pts = eltype(m)[]
   vals = eltype(m)[]

@@ -45,11 +45,12 @@ function interval_newton{T}(f,df,y::Number,da::T,db::T,tol=10eps(max(abs(da),abs
   for i = 1:2log2(-200log(eps(typeof(y))))
     #    while abs(rem) > 30eps(maximum(∂(D)))
     x -= rem / df(x)
-    rem = f(x)-y
-    abs(rem) < tol && break
     x .> db && (x = db)
     x .< da && (x = da)
+    rem = f(x)-y
+    abs(rem) < tol && break
   end
+
   abs(rem) > tol && error("Newton: failure to converge")
   x
 end
