@@ -1,3 +1,4 @@
+export rangedomain
 rangedomain(op::Operator) = domain(rangespace(op))
 
 containstransfer(M::Operator) = ApproxFun.iswrapper(M::Operator) && containstransfer(M.op)
@@ -6,6 +7,8 @@ for optype in (:(ApproxFun.InterlaceOperator),:(ApproxFun.PlusOperator),:(Approx
 end
 
 # Overloads
+
+typealias PureLaurent{D<:Domain} Hardy{false,D}
 
 #ApproxFun.qrfact(A::ApproxFun.QROperator) = A
 # rem()
@@ -51,20 +54,19 @@ function interval_newton{T}(f,df,y::Number,da::T,db::T,tol=10eps(max(abs(da),abs
   x
 end
 interval_newton(f,df,y::Number,D::Domain,tol=10eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,tol)
-# function interval_newton{T}(f,y::Number,da::T,db::T,tol=10eps(max(abs(da),abs(db))))
-#   x = da+(db-da)*rand(typeof(y))
-#   rem = f(x)-y
-#   for i = 1:3log2(eps(typeof(y))/200)
-#     x -= 400eps(x) * rem / (f(x+200eps(x))-f(x-200eps(x)))
-#     rem = f(x)-y
-#     abs(rem) < tol && break
-#     x .> db && (x = db)
-#     x .< da && (x = da)
-#   end
-#   abs(rem) > tol && error("Newton: failure to converge")
-#   x
-# end
 
+function disc_newton{T}(f,df,y::Number,rad::T,tol=10eps(rad))
+  x = rad*rand()
+  rem = f(x) - y
+  for i = 1:2log2(-200log(eps(typeof(y))))
+    x -= rem / df(x)
+    rem = f(x) - y
+    abs(rem) < tol && break
+    abs(x) > rad && (x /= abs(x))
+  end
+  abs(rem) > tol && error("Newton: failure to converge")
+  x
+end
 
 # ForwardDiff
 function forwarddiff(f)

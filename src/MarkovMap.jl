@@ -1,4 +1,4 @@
-export domain, rangedomain
+export MarkovMap, branch, nbranches
 
 # MarkovBranch
 
