@@ -59,60 +59,41 @@ function setcolstops!(L::ConcreteTransfer,inds,vals) #should be generic range/co
 end
 
 chebyTk(x,d,k::Integer) = cos((k-1)*acos(tocanonical(d,x))) #roundoff error grows linearly(??) with k may not be bad wrt x too
+function transferfunction{TT,D}(x,b::MarkovBranch,L::ConcreteTransfer{TT,Chebyshev{D}},k::Integer,T)
+  (v,dvdx) = mapinvP(b,x)
+  abs(dvdx).*chebyTk(v,domain(L),k)
+end
+
+fourierCSk(x,d,k::Integer) = rem(k,2) == 1 ? cos(fld(k,2)*tocanonical(d,x)) : sin(fld(k,2)*tocanonical(d,x))
+function transferfunction{TT,D}(x,b::MarkovBranch,,L::ConcreteTransfer{TT,Fourier{D}},k::Integer,T)
+  (v,dvdx) = mapinvP(b,x)
+  abs(dvdx).*fourierCSk(v,domain(L),k)
+end
+
+
+function default_transferbranch{TT,DD}(x,b::MarkovBranch,L::ConcreteTransfer{TT,DD},kk::Integer,T)
+  fn = Fun([zeros(T,kk-1);one(T)],domainspace(L));
+  (v,dvdx) = mapinvP(b,x)
+  abs(dvdx).*fn(v,domain(L),k)
+end
+transferbranch(x,L,kk,T) = default_transferbranch(x,L,kk,T)
+
 function transferfunction{TT,D}(x,L::ConcreteTransfer{TT,Chebyshev{D}},k::Integer,T)
   y = zero(x);
 
   for b in branches(getmap(L))
-    if isa(b,FwdExpandingBranch)
-      mapinvx = mapinv(b,x)
-      y += abs(1/unsafe_mapD(b,mapinvx)).*chebyTk(mapinvx,domain(L),k)
-    else
-      y += abs(mapinvD(b,x)).*chebyTk(mapinv(b,x),domain(L),k)
-    end
+    y += transferbranch(x,b,L,k,T)
   end;
   abs(y) < 20k*eps(one(abs(y))) ? zero(y) : y
 end
 
-fourierCSk(x,d,k::Integer) = rem(k,2) == 1 ? cos(fld(k,2)*tocanonical(d,x)) : sin(fld(k,2)*tocanonical(d,x))
-function transferfunction{TT,D}(x,L::ConcreteTransfer{TT,Fourier{D}},k::Integer,T)
-  y = zero(x);
-
-  for b in branches(getmap(L))
-    if isa(b,FwdExpandingBranch)
-      mapinvx = mapinv(b,x)
-      y += abs(1/unsafe_mapD(b,mapinvx)).*fourierCSk(mapinvx,domain(L),k)
-    else
-      y += abs(mapinvD(b,x)).*fourierCSk(mapinv(b,x),domain(L),k)
-    end
-  end;
-  abs(y) < 20k*eps(one(abs(y))) ? zero(y) : y
-
-end
-
-
-function default_transferfunction{TT,DD}(x,L::ConcreteTransfer{TT,DD},kk::Integer,T)
-  y = zero(x);
-  fn = Fun([zeros(T,kk-1);one(T)],domainspace(L));
-
-  for b in branches(getmap(L))
-    if isa(b,FwdExpandingBranch)
-      mapinvx = mapinv(b,x)
-      y += abs(1/unsafe_mapD(b,mapinvx)).*fn(mapinvx)
-    else
-      y += abs(mapinvD(b,x)).*fn(mapinv(b,x))
-    end
-  end;
-
-  abs(y) < 200eps(one(abs(y))) ? zero(y) : y
-end
-transferfunction(x,L,kk,T) = default_transferfunction(x,L,kk,T)
 
 # Indexing
 
 transferfunction_nodes{TT,D,R,M<:AbstractMarkovMap}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
-  [transferfunction(p,L,kk,T) for p in points(rangespace(L),n)]
+  T[transferfunction(p,L,kk,T) for p in points(rangespace(L),n)]
 transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
-  [transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),L,kk,T) for k = 1:n]
+  T[transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),L,kk,T) for k = 1:n]
 
 
 function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range,padding::Bool=false)

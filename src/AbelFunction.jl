@@ -12,20 +12,20 @@ type AbelFunction{T<:Real,ff,gg}
   rab::T #radius of A inverse??
   #  K::Int #
   dh0::T # first derivative of h at 0
-  offset::T # constant offset of coefficients
+  offset::T # (real) constant offset of coefficients
 
   function AbelFunction(h,dh,cfs,alpha,p,sgn,r0,rd,rab,dh0,offset)
     @assert alpha > 0
     @assert sgn^2 == one(T)
     @assert r0 > 0
-    @assert rd > 0
-    @assert rab > 0
-    @assert dh0 > 0
+    @assert rd ≥ 0
+    @assert rab ≥ 0
+    @assert dh0 ≥ 0
     new(h,dh,cfs,alpha,p,sgn,r0,rd,rab,dh0,offset)
   end
 end
 function AbelFunction{T<:Real}(h,dh,cfs::Vector{Complex{T}},alpha::T,p::T,sgn::T,r0::T,rd::T,rab::T,dh0::T,offset::T)
-  AbelFunction{T,typeof{h},typeof{dh}}(h,dh,cfs,alpha,p,sgn,r0,rd,rab,dh0,offset)
+  AbelFunction{T,typeof(h),typeof(dh)}(h,dh,cfs,alpha,p,sgn,r0,rd,rab,dh0,offset)
 end
 
 toring(R::AbelFunction,x) = -(R.sgn*(x-R.p)).^(-R.alpha)/(R.alpha*R.dh0)
@@ -55,7 +55,6 @@ function constructasym!{T<:Real}(R::AbelFunction{T},r0::T=R.r0)
   Qr0 = Q(R)
   Cs_initialguess = Cs(R)
   R.rd = max(R.rd,N*Qr0*(1+Qr0*exp(-1/N)),(2Cs_initialguess+1)*ringhconv(R,r0))
-  #  println(R.rd)
   rd_space = PureLaurent(Circle(R.rd))
 
   Delta = zeros(T,N,N)
@@ -76,7 +75,7 @@ function constructasym!{T<:Real}(R::AbelFunction{T},r0::T=R.r0)
   R
 end
 
-function AbelFunction{T<:Real,ff,gg}(h::ff,dh::gg,r0::T,alpha::T,p::T=zero(T),sgn::T=one(T))
+function AbelFunction{T<:Real,ff,gg}(h::ff,dh::gg,alpha::T,r0::T,p::T=zero(T),sgn::T=one(T))
   R=AbelFunction(h,dh,Complex{T}[],alpha,p,sgn,r0,zero(T),zero(T),convert(T,dh(0)),zero(T))
   constructasym!(R)
   R
@@ -134,7 +133,6 @@ function mapP{T}(R::AbelFunction{T},x::Number)
       n += 1
       n == 100 && error("Backwards iteration failed in Abel function")
     end
-    println(n)
     return (mapasym(R,fromring(R,ringhconv(R,y))) + n,mapasymD(R,fromring(R,ringhconv(R,y)))/dv)
   end
 end
@@ -142,8 +140,8 @@ end
 mapD(R::AbelFunction,x::Number) = mapP(R,x)[2]
 
 
-function zeroat!(R::AbelFunction,x::Number)
-  R.offset -= R(x)
+function zeroat!{T}(R::AbelFunction{T},x::Number)
+  R.offset -= convert(T,R(x))
   R
 end
 
