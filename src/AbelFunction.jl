@@ -12,12 +12,21 @@ type AbelFunction{T<:Real,ff,gg}
   rab::T #radius of A inverse??
   #  K::Int #
   dh0::T # first derivative of h at 0
+  offset::T # constant offset of coefficients
 
-#   function AbelFunction(h,dh,alpha,p,sgn,r0)
-#     new(h,dh,Complex{T}[],alpha,p,r0,sgn,zero(T),zero(T),dh(0))
-#   end
+  function AbelFunction(h,dh,cfs,alpha,p,sgn,r0,rd,rab,dh0,offset)
+    @assert alpha > 0
+    @assert sgn^2 == one(T)
+    @assert r0 > 0
+    @assert rd > 0
+    @assert rab > 0
+    @assert dh0 > 0
+    new(h,dh,cfs,alpha,p,sgn,r0,rd,rab,dh0,offset)
+  end
 end
-AbelFunction(h,dh,cfs,alpha,p,sgn,r0,rd,rab,dh0) = AbelFunction{typeof{h},typeof{dh}}
+function AbelFunction{T<:Real}(h,dh,cfs::Vector{Complex{T}},alpha::T,p::T,sgn::T,r0::T,rd::T,rab::T,dh0::T,offset::T)
+  AbelFunction{T,typeof{h},typeof{dh}}(h,dh,cfs,alpha,p,sgn,r0,rd,rab,dh0,offset)
+end
 
 toring(R::AbelFunction,x) = -(R.sgn*(x-R.p)).^(-R.alpha)/(R.alpha*R.dh0)
 toringD(R::AbelFunction,x) = -(R.sgn*(x-R.p)).^(-R.alpha)/(x-R.p)
@@ -39,14 +48,14 @@ function Cs(R::AbelFunction,s::Real=abs(ringhconv(R,R.r0)))
 end
 
 
-function construct_asymptotic_approx!{T<:Real}(R::AbelFunction{T},r0::T=R.r0)
+function constructasym!{T<:Real}(R::AbelFunction{T},r0::T=R.r0)
   N = convert(Int,ceil(-log(eps(T))/2))+5
-#  R.cfs = zeros(T,N)
+  #  R.cfs = zeros(T,N)
 
   Qr0 = Q(R)
   Cs_initialguess = Cs(R)
   R.rd = max(R.rd,N*Qr0*(1+Qr0*exp(-1/N)),(2Cs_initialguess+1)*ringhconv(R,r0))
-#  println(R.rd)
+  #  println(R.rd)
   rd_space = PureLaurent(Circle(R.rd))
 
   Delta = zeros(T,N,N)
@@ -58,7 +67,7 @@ function construct_asymptotic_approx!{T<:Real}(R::AbelFunction{T},r0::T=R.r0)
     Delta[k:end,k] = real(pad!(funcfs[k+1:end],N-k+1))
   end
   #Delta[abs(Delta) .< 10*N*eps(T)] = zero(T)
-#  R.cfs = Delta \ real(pad!(coefficients(Fun(z->(z/R.h(ringhconv(R,z))^(R.alpha)-z-1)::typeof(z),rd_space)')[2:end],N))
+  #  R.cfs = Delta \ real(pad!(coefficients(Fun(z->(z/R.h(ringhconv(R,z))^(R.alpha)-z-1)::typeof(z),rd_space)')[2:end],N))
   acfs=-coefficients(Fun(z->(z/R.h(ringhconv(R,z))^(R.alpha)-z-1)::typeof(z),rd_space)')
   Rcfs = (Delta\real(pad!(acfs[2:end],N)))./R.rd.^(1:N)
   chop!(Rcfs,N*eps(T))
@@ -67,42 +76,80 @@ function construct_asymptotic_approx!{T<:Real}(R::AbelFunction{T},r0::T=R.r0)
   R
 end
 
-
-
 function AbelFunction{T<:Real,ff,gg}(h::ff,dh::gg,r0::T,alpha::T,p::T=zero(T),sgn::T=one(T))
-  R=AbelFunction(h,dh,Complex{T}[],alpha,p,sgn,r0,zero(T),zero(T),convert(T,dh(0)))
-  construct_asymptotic_approx!(R)
+  R=AbelFunction(h,dh,Complex{T}[],alpha,p,sgn,r0,zero(T),zero(T),convert(T,dh(0)),zero(T))
+  constructasym!(R)
   R
 end
 
+function hdisc_newton{T}(R::AbelFunction{T},y::Number,rad::T=abs(y)/max(0.1,1-abs(y)),tol=10eps(rad))
+  x = convert(typeof(y),rad*rand(typeof(real(y))))
+  rhx = convert(T,R.h(x))
+  rem = x*rhx^R.alpha - y
+  for i = 1:2log2(-200log(eps(one(real(y)))))
+    x -= rem / rhx^R.alpha / (1 + R.alpha*x*R.dh(x)/rhx)
+    rhx = R.h(x)
+    rem = x*(R.h(x))^R.alpha  - y
+    abs(rem) < tol && break
+    abs(x) > rad && (x /= abs(x))
+  end
+  abs(rem) > tol && error("Newton: failure to converge")
+  x
+
+end
+
 function mapasym(R::AbelFunction,x)
-  #  if abs(x) < fromring(R.rd)
   y = zero(x)
   z = toring(R,x)
   for i = length(R.cfs):-1:2
     y += R.cfs[i]*z.^(1-i)/(1-i)
   end
   y += R.cfs[1]*log(-z)
+  y += R.offset
   y += z
   y
-#   else
-#     error("Absolute value of x too big")
-#   end
 end
+function mapasymD(R::AbelFunction,x)
+  y = zero(x)
+  z = toring(R,x)
+  for i = length(R.cfs):-1:1
+    y += R.cfs[i]*z.^(-i)
+  end
+  y += 1
+  y*toringD(R,x)
+end
+mapasymP(R::AbelFunction,x) = (mapasym(R,x),mapasymD(R,x))
 
-function (R::AbelFunction)(x::Number)
+function mapP{T}(R::AbelFunction{T},x::Number)
   if abs(toring(R,x)) > R.rd
-    return mapasym(R,x)
+    return mapasymP(R,x)
   else
     n = 0
     y = ringhconv(R,toring(R,x))
-    println((x,y,ringhconv(R,R.rd)))
+    dv = one(T)
     while abs(y) > abs(ringhconv(R,R.rd))
-      y = disc_newton(gg->(gg*(R.h(gg))^R.alpha)::typeof(gg),gg->((gg*R.alpha*R.dh(gg)+R.h(gg))*R.h(gg)^(R.alpha-1))::typeof(gg),y,max(2y,y/(1-y)))
+      y = hdisc_newton(R,y)
+      rhy = R.h(y)
+      dv *= rhy^R.alpha * (1 + R.alpha*y*R.dh(y)/rhy)
       n += 1
       n == 100 && error("Backwards iteration failed in Abel function")
     end
     println(n)
-    return mapasym(R,fromring(R,ringhconv(R,y))) + n
+    return (mapasym(R,fromring(R,ringhconv(R,y))) + n,mapasymD(R,fromring(R,ringhconv(R,y)))/dv)
   end
 end
+(R::AbelFunction)(x::Number) = mapP(R,x)[1]
+mapD(R::AbelFunction,x::Number) = mapP(R,x)[2]
+
+
+function zeroat!(R::AbelFunction,x::Number)
+  R.offset -= R(x)
+  R
+end
+
+# TODO: Abel function inverse
+#mapasym_recip(R::AbelFunction,x::Number) =1/mapasym(R,x)
+#mapasym_recipD(R::AbelFunction,x::Number) = mapasymD(R,x)/mapasym(R,x)^2
+#function mapasyminv(R::AbelFunction,x::Number)
+
+
