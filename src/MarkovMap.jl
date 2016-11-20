@@ -8,8 +8,20 @@ Base.summary(b::MarkovBranch) =  string(typeof(b).name.name)*":"*string(domain(b
 Base.eltype(b::MarkovBranch) = eltype(rangedomain(b))
 Base.show(io::IO,b::MarkovBranch) = print(io,typeof(b)) #temporary
 
-immutable NeutralBranch{D,R} <: MarkovBranch{D,R}
+immutable NeutralBranch{A<:AbelFunction,D,R} <: MarkovBranch{D,R}
+  abel::A
+  domain::D
+  rangedomain::R
+  function NeutralBranch(abel,domain,rangedomain)
+    @assert in(abel.p,∂(domain)∩∂(rangedomain))
+    @assert issubset(domain,rangedomain)
+    @assert domain != rangedomain
+    @assert all((abel.sgn * (abel.p - ∂(domain))) .> 0) "Abel function pointing in the wrong direction"
+    new(abel,domain,rangedomain)
+  end
 end
+NeutralBranch{A<:AbelFunction,D<:Domain,R<:Domain}(abel::A,dom::D,ran::R) =
+  NeutralBranch{typeof(abel),typeof(dom),typeof(ran)}(abel,dom,ran)
 
 immutable FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
   f::ff
