@@ -160,7 +160,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
 
     if L.colstops[kk] >= 1
       coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^max(4,convert(Int,ceil(log2(L.colstops[kk])))),kk,T))
-      maxabsc = maxabs(coeffs)
+      maxabsc = max(maxabs(coeffs),one(T))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs))/10)
     elseif L.colstops[kk]  == 0
       coeffs = [0.]
@@ -184,6 +184,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
           coeffs = [0.]
           break
         else
+          maxabsfr = max(maxabsfr,one(T))
           b = ApproxFun.block(rs,length(coeffs))
           bs = ApproxFun.blockstart(rs,max(b-2,1))
           if length(coeffs) > 8 && maxabs(coeffs[bs:end]) < tol*maxabsc*logn &&

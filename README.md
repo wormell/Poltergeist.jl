@@ -1,7 +1,7 @@
 # Poltergeist.jl 🏏👻
 
-[![Build Status](https://travis-ci.org/johnwormell/GhostCoop.jl.svg?branch=master)](https://travis-ci.org/johnwormell/GhostCoop.jl)
-[![Coverage Status](https://coveralls.io/repos/github/johnwormell/GhostCoop.jl/badge.svg?branch=master)](https://coveralls.io/github/johnwormell/GhostCoop.jl?branch=master)
+[![Build Status](https://travis-ci.org/johnwormell/Poltergeist.jl.svg?branch=master)](https://travis-ci.org/johnwormell/Poltergeist.jl)
+[![Coverage Status](https://coveralls.io/repos/github/johnwormell/Poltergeist.jl/badge.svg?branch=master)](https://coveralls.io/github/johnwormell/Poltergeist.jl?branch=master)
 
 Poltergeist is a package for quick and accurate approximation of one-dimensional chaotic dynamical systems. It is geared towards spectral methods* and uses spectral methods^† for its numerical implementation. Poltergeist relies on and closely interfaces with the adaptive function approximation package [ApproxFun](https://github.com/ApproxFun/ApproxFun.jl).  
 
@@ -9,7 +9,7 @@ Poltergeist is a package for quick and accurate approximation of one-dimensional
  <!---computes transfer operators of one-dimensional chaotic systems in spectral bases. This enables one to find statistical properties of dynamical systems quickly, reliably and abstractly.
 --->
 
-Take your favourite Markov uniformly expanding dynamical system and give it digital form:
+<!---Take your favourite Markov uniformly expanding dynamical system and give it digital form:
 
 ```julia
 using Poltergeist, ApproxFun
@@ -18,7 +18,7 @@ fv = [x->2x+sin(2pi*x)/8,x->2-2x]
 M = MarkovMap(d,fv,[0,1/2,1])
 M(0.25), M'(0.25)
 ```
-<!---want to plot Markov Map--->
+<>---want to plot Markov Map---/>
 
 Primarily, Poltergeist provides a very efficient and usable computer representation of transfer operators. Calling ```Transfer``` on a ```MarkovMap``` automatically creates a calculable computer representation of the transfer operator in a Chebyshev basis. Transfer operators are instantiated as Operator types, and can do (numerically) all the kinds of things one expects from linear operators on function spaces:
 
@@ -39,7 +39,7 @@ norm(L*ρ-ρ) # 2.3043432e-16
 using Plots
 plot(ρ)
 ```
-<!--- plot!(linearresponse(L,Fun(x->x*(1-x),d))) --->
+<!--- plot!(linearresponse(L,Fun(x->x*(1-x),d))) ---/>
 <img src=https://github.com/johnwormell/GhostCoop.jl/raw/master/images/acim.png width=500 height=400>
 
 Because the mathematical objects are given highly accurate Fourier and Chebyshev approximations, these commands give spectral accuracy: one can calculate acims to 15 digits of accuracy in a fraction of a second.
@@ -55,7 +55,7 @@ norm(acim(doubling)-1)
 ```
 --->
 
-<!--- induced maps --->
+<!--- induced maps ---/>
 
 ## Publications
 
