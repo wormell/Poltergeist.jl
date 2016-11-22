@@ -73,7 +73,7 @@ function fullmeasure_asym(R::AbelFunction,m::MarkovMap,x::Number,d::Space,k::Int
   end
  #   println(intvals)
   dL = ApproxFun.Chebyshev()
-  CQ = real(mapasymD(R,x))/R.alpha * sum(Fun(ApproxFun.transform(dL,intvals),dL))
+  CQ = real(mapasymD(R,x))/R.alpha * sum(Fun(dL,ApproxFun.transform(dL,intvals)))
 
   IQ+JQ+CQ
 end

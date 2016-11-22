@@ -72,7 +72,7 @@ immutable NeutralBranch{A<:AbelFunction,D,R} <: MarkovBranch{D,R}
     @assert domain != rangedomain
     @assert length(setdiff(∂(domain),∂(rangedomain)))==1
     @assert (setdiff(∂(domain),∂(rangedomain))[1]-abel.p)*abel.sgn > 0 "Abel function pointing in the wrong direction"
-    @assert arclength(domain)*abel.h(arclength(domain)^abel.alpha) == arclength(rangedomain) "Branch not Markov"
+    @assert arclength(domain)*abel.h(arclength(domain)^abel.alpha) ≈ arclength(rangedomain) "Branch not Markov"
     new(abel,domain,rangedomain)
   end
 end
