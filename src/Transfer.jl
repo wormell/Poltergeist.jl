@@ -3,7 +3,7 @@ export Transfer
 abstract AbstractTransfer{T} <: Operator{T}
 
 ApproxFun.israggedbelow(L::AbstractTransfer) = true
-Base.issymmetric(L::AbstractTransfer) = false
+#Base.issymmetric(L::AbstractTransfer) = false
 
 #for OP in (:(ApproxFun.domain),:rangedomain)
 #    @eval $OP(L::AbstractTransfer) = $OP(getmap(L))
