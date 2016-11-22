@@ -25,12 +25,11 @@ FwdExpandingBranch{D<:Domain,R<:Domain,ff,gg}(f::ff,dfdx::gg,dom::D,ran::R) =
 unsafe_call(b::FwdExpandingBranch,x::Number) = b.f(x)
 unsafe_mapD(b::FwdExpandingBranch,x::Number) = b.dfdx(x)
 unsafe_mapP(b::FwdExpandingBranch,x::Number) = (unsafe_call(b,x),unsafe_mapD(b,x))
-mapinv(b::FwdExpandingBranch,x::Number) = interval_newton(b.f,b.dfdx,x,b.domain)
+mapinv(b::FwdExpandingBranch,x::Number) = interval_newton(b.f,b.dfdx,x,b.domain,interval_guess(x,b.domain,b.rangedomain))
 mapinvD(b::FwdExpandingBranch,x::Number) = 1/b.dfdx(mapinv(b,x))
 function mapinvP(b::FwdExpandingBranch,x::Number)
   vx = mapinv(b,x)
-  ~in(vx,b.domain) && print(vx,b.domain)
-  (vx,1/mapD(b,vx))
+  (vx,1/unsafe_mapD(b,vx))
 end
 
 
@@ -49,11 +48,11 @@ end
 RevExpandingBranch{ff,gg,D<:Domain,R<:Domain}(v::ff,dvdx::gg,dom::D,ran::R) =
   RevExpandingBranch{typeof(v),typeof(dvdx),typeof(dom),typeof(ran)}(v,dvdx,dom,ran)
 
-unsafe_call(b::RevExpandingBranch,x::Number) = interval_newton(b.v,b.dvdx,x,b.rangedomain)
+unsafe_call(b::RevExpandingBranch,x::Number) = interval_newton(b.v,b.dvdx,x,b.rangedomain,interval_guess(x,b.rangedomain,b.domain))
 unsafe_mapD(b::RevExpandingBranch,x::Number) =  1/b.dvdx(unsafe_call(b,x))
 function unsafe_mapP(b::RevExpandingBranch,x::Number)
-  fx = b(x)
-  (fx,1/unsafe_mapD(b,fx))
+  fx = unsafe_call(b,x)
+  (fx,1/mapinvD(b,fx))
 end
 mapinv(b::RevExpandingBranch,x::Number) = b.v(x)
 mapinvD(b::RevExpandingBranch,x::Number) = b.dvdx(x)
@@ -114,7 +113,7 @@ end
 mapinvD(b::NeutralBranch,x) = mapD(b,mapinvD(b,x))
 function mapinvP(b::NeutralBranch,x)
   vx = mapinv(b,x)
-  (vx,1/mapD(b,vx))
+  (vx,1/unsafe_mapD(b,vx))
 end
 
 
@@ -146,9 +145,25 @@ function branch{ff,gg,T<:Number,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},b::V
   branch(fs,dfdxs,ApproxFun.Interval{T}[Interval(b[i],b[i+1]) for i = 1:length(b)-1],ran,dir)
 end
 
-branch{ff,T<:Union{Number,Domain}}(fs::Vector{ff},b::Vector{T},args...) =
-  branch(fs,[forwarddiff(f) for f in fs],b,args...)
-branch{T<:Union{Number,Domain}}(f,b::T,args...) = branch(f,forwarddiff(f),b,args...)
+function autodiff_dual(f,bi::Number)
+  fd = FunctionDerivative(f)
+  try
+    fd(bi)
+  catch e
+    isa(e,MethodError) && error("To use automatic differentiation, your function must accept DualNumbers")
+    throw(e)
+  end
+  fd
+end
+autodiff_dual(f,bi::Domain) = autodiff_dual(f,rand(bi))
+
+function branch{ff,T<:Union{Number,Domain}}(fs::Vector{ff},b::Vector{T},args...)
+#   for (i,f) in enumerate(fs)
+#     check_dualmethods(f,b[i])
+#   end
+  branch(fs,[autodiff_dual(fs[i],b[i]) for i in eachindex(fs)],b,args...)
+end
+branch{T<:Union{Number,Domain}}(f,b::T,args...) = branch(f,autodiff_dual(f,b),b,args...)
 
 branch{ff<:Fun,T<:Union{Number,Domain}}(fs::Vector{ff},b::Vector{T},args...) =
   branch(fs,[f' for f in fs],b,args...)
@@ -159,7 +174,7 @@ branch{T<:Union{Number,Domain}}(f::Fun,b::T,args...) = branch(f,f',b,args...)
 
 for TYP in (:FwdExpandingBranch,:RevExpandingBranch,:NeutralBranch)
   @eval (b::$TYP)(x::Number) = in(x,b.domain) ? unsafe_call(b,x) : throw(DomainError)
-  @eval mapD(b::$TYP,x::Number) = in(x,b.domain) ? unsafe_mapD(b,x) : throw(DomainError)
+  @eval mapD(b::$TYP,x::Number) = in(x,b.domain) ? unsafe_mapD(b,x) : error("DomainError: $x in $(b.domain)")
   @eval mapP(b::$TYP,x::Number) = in(x,b.domain) ? unsafe_mapP(b,x) : throw(DomainError)
   @eval domain(b::$TYP) = b.domain
   @eval rangedomain(b::$TYP) = b.rangedomain
@@ -242,8 +257,8 @@ function MarkovMap{D,R,ff}(
   bl = Array(T,length(f)); bu = Array(T,length(f))
   tol = 10eps(maxabs([dom.a,dom.b]))
   for i = 1:length(f)
-    ba = interval_newton(f[i],dfdx[i],ran.a,dom.a,dom.b,tol)
-    bb = interval_newton(f[i],dfdx[i],ran.b,dom.a,dom.b,tol)
+    ba = interval_newton(f[i],dfdx[i],ran.a,dom.a,dom.b,interval_guess(x,dom,ran),tol)
+    bb = interval_newton(f[i],dfdx[i],ran.b,dom.a,dom.b,interval_guess(x,dom,ran),tol)
     bl[i] = min(ba,bb); bu[i] = max(ba,bb)
     bl[i] < dom.a && bl[i]-dom.a > -2.5tol && (bl[i] = dom.a)
     bu[i] > dom.b && bu[i]-dom.b < 2.5tol && (bu[i] = dom.b)

@@ -31,16 +31,15 @@ Base.convert{T<:Number}(::Type{T},p::InterpolationNode) = convert(T,points(p.sp,
 Base.convert{S<:Space}(::Type{InterpolationNode{S}},p::InterpolationNode{S}) = p
 Base.promote_rule{T<:Number,S<:Space}(::Type{T},::Type{InterpolationNode{S}}) = promote_type(T,eltype(S))
 Base.show(p::InterpolationNode) = show(convert(Nu))
-space(p::InterpolationNode) = p.sp
-domain(p::InterpolationNode) = domain(p.sp)
+ApproxFun.space(p::InterpolationNode) = p.sp
+ApproxFun.domain(p::InterpolationNode) = domain(p.sp)
 Base.eltype(p::InterpolationNode) = eltype(p.sp)
 
 Base.zero(p::InterpolationNode) = zero(eltype(p))
 
 # Newton's method
 
-function interval_newton{T}(f,df,y::Number,da::T,db::T,tol=10eps(max(abs(da),abs(db))))
-  x = da+(db-da)*rand(typeof(y))
+function interval_newton{T,U<:Real}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*rand(typeof(y))),tol=10eps(max(abs(da),abs(db))))
   rem = f(x)-y
   for i = 1:2log2(-200log(eps(typeof(y))))
     #    while abs(rem) > 30eps(maximum(∂(D)))
@@ -55,9 +54,23 @@ function interval_newton{T}(f,df,y::Number,da::T,db::T,tol=10eps(max(abs(da),abs
   x
 end
 interval_newton(f,df,y::Number,D::Domain,tol=10eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,tol)
+interval_guess(y::Number,dom::Domain,ran::Domain) = (dom.a*ran.b-ran.a*dom.b+y*(dom.b-dom.a))/(ran.b-ran.a)
 
-function disc_newton{T}(f,df,y::Number,rad::T,tol=10eps(rad))
-  x = convert(typeof(y),rad*rand(typeof(real(y))))
+function interval_newton{T,U<:Complex}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*rand(typeof(y))),tol=10eps(max(abs(da),abs(db))))
+  rem = f(x)-y
+  for i = 1:2log2(-200log(eps(typeof(abs(y)))))
+    #    while abs(rem) > 30eps(maximum(∂(D)))
+    x -= rem / df(x)
+    rem = f(x)-y
+    abs(rem) < tol && break
+  end
+
+  abs(rem) > tol && error("Newton: failure to converge")
+  x
+end
+
+function disc_newton{T,U}(f,df,y::U,rad::T,x::U=y,tol=10eps(rad))
+#   x = convert(typeof(y),rad*rand(typeof(real(y))))
   rem = f(x) - y
   for i = 1:2log2(-200log(eps(typeof(real(y)))))
     x -= rem / df(x)
@@ -70,9 +83,14 @@ function disc_newton{T}(f,df,y::Number,rad::T,tol=10eps(rad))
 end
 
 # ForwardDiff
-function forwarddiff(f)
-  function dfdx(x)
-    ForwardDiff.derivative(f,x)::typeof(x)
-  end
-  dfdx
+# function forwarddiff(f)
+#   function dfdx(x)
+#     ForwardDiff.derivative(f,x)::typeof(x)
+#   end
+#   dfdx
+# end
+
+type FunctionDerivative{ff<:Function}
+  f::ff
 end
+(fd::FunctionDerivative)(x::Number) = oftype(x,dualpart(fd.f(Dual(x,one(x)))))

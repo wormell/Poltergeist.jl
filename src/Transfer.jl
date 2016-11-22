@@ -63,7 +63,11 @@ end
 # transferbranch
 
 chebyTk(x,d,k::Integer) = cos((k-1)*acos(tocanonical(d,x))) #roundoff error grows linearly(??) with k may not be bad wrt x too
-chebyTk_int(x,d,k::Integer) = (k*chebyTk(x,d,k+1) - tocanonical(d,x)*chebyTk(x,d,k))/(k^2-1)/tocanonicalD(d,x)
+function chebyTk_int(x,d,k::Integer)
+#   k == 1 && return tocanonical(d,x)/tocanonicalD(d,x)
+  k == 2 && return tocanonical(d,x)^2/2tocanonicalD(d,x)
+  ((k-1)*chebyTk(x,d,k+1) - k*tocanonical(d,x)*chebyTk(x,d,k))/((k-1)^2-1)/tocanonicalD(d,x)
+end
 function transferbranch(x,b::MarkovBranch,d::Chebyshev,k::Integer,T)
   (v,dvdx) = mapinvP(b,x)
   abs(dvdx).*chebyTk(v,domain(d),k)
@@ -71,7 +75,7 @@ end
 function transferbranch_int{D}(x,y,b::MarkovBranch,d::Chebyshev{D},k::Integer,T)
   vy = mapinv(b,y); vx = mapinv(b,x)
   sgn = sign((vy-vx)/(y-x))
-  sgn*(chebyTk_int(y,domain(d),k) - chebyTk_int(x,domain(d),k))
+  sgn*(chebyTk_int(vy,domain(d),k) - chebyTk_int(vx,domain(d),k))
 end
 
 fourierCSk(x,d,k::Integer) = rem(k,2) == 1 ? cos(fld(k,2)*tocanonical(d,x)) : sin(fld(k,2)*tocanonical(d,x))
@@ -87,7 +91,7 @@ end
 function transferbranch_int{D}(x,y,b::MarkovBranch,d::Fourier{D},k::Integer,T)
   vy = mapinv(b,y); vx = mapinv(b,x)
   sgn = sign((vy-vx)/(y-x))
-  sgn*(fourierCSk_int(y,domain(d),k) - fourierCSk_int(x,domain(d),k))
+  sgn*(fourierCSk_int(vy,domain(d),k) - fourierCSk_int(vx,domain(d),k))
 end
 
 
@@ -114,7 +118,7 @@ function transferfunction(x,m::MarkovMap,d::Space,k::Integer,T)
   for b in branches(m)
     y += transferbranch(x,b,d,k,T)
   end;
-  abs(y) < 20k*eps(one(abs(y))) ? zero(y) : y
+  y
 end
 
 function transferfunction_int(x,y,m::MarkovMap,d::Space,k::Integer,T)
@@ -123,7 +127,6 @@ function transferfunction_int(x,y,m::MarkovMap,d::Space,k::Integer,T)
   for b in branches(m)
     q += transferbranch_int(x,y,b,d,k,T)
   end;
-#  abs(y) < 20k*eps(one(abs(y))) ? zero(y) : y
   q
 end
 
@@ -176,7 +179,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       while logn < 21
         coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
 
-        maxabsc = maxabs(coeffs)
+        maxabsc = max(one(T),maxabs(coeffs))
         if maxabsc == 0 && maxabsfr == 0
           coeffs = [0.]
           break
@@ -256,4 +259,9 @@ function ApproxFun.resizedata!{T,D<:Domain,R<:Domain,M<:AbstractMarkovMap}(co::A
   end
 
   co
+end
+
+function ApproxFun.colstop{T,D<:Domain,R<:Domain,M<:AbstractMarkovMap}(co::ApproxFun.CachedOperator{T,ApproxFun.RaggedMatrix{T},ConcreteTransfer{T,D,R,M}},n::Integer)
+  ApproxFun.resizedata!(co,:,n)
+  ApproxFun.colstop(co.data,n)
 end
