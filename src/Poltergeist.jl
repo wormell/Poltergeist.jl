@@ -1,5 +1,5 @@
 module Poltergeist
-  using Base, ApproxFun, BandedMatrices, Compat, DualNumbers, PyPlot#, FastTransforms
+  using Base, ApproxFun, BandedMatrices, Compat, DualNumbers#, PyPlot#, FastTransforms
 
 import Base: values,getindex,setindex!,*,.*,+,.+,-,.-,==,<,<=,>,|,
 >=,./,/,.^,^,\,∪,transpose, size, length, issymmetric, eltype#, maximum, minimum
@@ -12,5 +12,6 @@ include("MarkovMap.jl")
 include("Transfer.jl")
 include("InducedTransfer.jl")
 include("Schur.jl")
+include("TimeSeries.jl")
 include("poetry.jl")
 end # module
