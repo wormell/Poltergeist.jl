@@ -96,12 +96,12 @@ end
 
 
 function default_transferbranch(x,b::MarkovBranch,d::Space,k::Integer,T)
-  fn = Fun([zeros(T,k-1);one(T)],d);
+  fn = Fun(d,[zeros(T,k-1);one(T)]);
   (v,dvdx) = mapinvP(b,x)
   abs(dvdx).*fn(v)
 end
 function default_transferbranch_int(x,y,b::MarkovBranch,d::Space,k::Integer,T)
-  fn = cumsum(Fun([zeros(T,k-1);one(T)],d))
+  fn = cumsum(Fun(d,[zeros(T,k-1);one(T)]))
   vy = mapinv(b,y); vx = mapinv(b,x)
   sgn = sign((vy-vx)/(y-x))
   sgn*(fn(vy)-fn(vx))
@@ -187,7 +187,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
           b = ApproxFun.block(rs,length(coeffs))
           bs = ApproxFun.blockstart(rs,max(b-2,1))
           if length(coeffs) > 8 && maxabs(coeffs[bs:end]) < tol*maxabsc*logn &&
-              all(kkk->norm(Fun(coeffs,rs)(r[kkk])-fr[kkk],1)<tol*length(coeffs)*maxabsfr*1000,1:length(r))
+              all(kkk->norm(Fun(rs,coeffs)(r[kkk])-fr[kkk],1)<tol*length(coeffs)*maxabsfr*1000,1:length(r))
             chop!(coeffs,tol*maxabsc*logn/10)
             break
           end
