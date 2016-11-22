@@ -1,6 +1,6 @@
 using Poltergeist
 using Base.Test
-Pkg.installed()["ApproxFun"]~=v"0.4.0+" && Pkg.checkout("ApproxFun","development")
+Pkg.installed()["ApproxFun"] != v"0.4.0+" && Pkg.checkout("ApproxFun","development")
 using ApproxFun
 
 f1(x)=2x+sin(2pi*x)/8pi; f2(x)=2x+sin(2pi*x)/8pi-1
