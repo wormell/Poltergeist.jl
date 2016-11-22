@@ -1,4 +1,4 @@
-using GhostCoop
+using Poltergeist
 using Base.Test
 using ApproxFun
 

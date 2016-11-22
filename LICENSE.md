@@ -1,4 +1,4 @@
-The GhostCoop.jl package is licensed under the Simplified "2-clause" BSD License:
+The Poltergeist.jl package is licensed under the Simplified "2-clause" BSD License:
 
 > Copyright (c) 2016: John Wormell.
 > All rights reserved.

@@ -1,4 +1,4 @@
-module GhostCoop
+module Poltergeist
   using Base, ApproxFun, BandedMatrices, Compat, DualNumbers, PyPlot#, FastTransforms
 
 import Base: values,getindex,setindex!,*,.*,+,.+,-,.-,==,<,<=,>,|,
