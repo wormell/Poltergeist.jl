@@ -1,9 +1,9 @@
-# GhostCoop 👻✊
+# Poltergeist.jl 🏏👻
 
 [![Build Status](https://travis-ci.org/johnwormell/GhostCoop.jl.svg?branch=master)](https://travis-ci.org/johnwormell/GhostCoop.jl)
 [![Coverage Status](https://coveralls.io/repos/github/johnwormell/GhostCoop.jl/badge.svg?branch=master)](https://coveralls.io/github/johnwormell/GhostCoop.jl?branch=master)
 
-GhostCoop is a package for quick and accurate approximation of one-dimensional chaotic dynamical systems. It is geared towards spectral methods* and uses spectral methods^† for its numerical implementation. GhostCoop relies on and closely interfaces with the adaptive function approximation package [ApproxFun](https://github.com/ApproxFun/ApproxFun.jl).  
+Poltergeist is a package for quick and accurate approximation of one-dimensional chaotic dynamical systems. It is geared towards spectral methods* and uses spectral methods^† for its numerical implementation. Poltergeist relies on and closely interfaces with the adaptive function approximation package [ApproxFun](https://github.com/ApproxFun/ApproxFun.jl).  
 
 
  <!---computes transfer operators of one-dimensional chaotic systems in spectral bases. This enables one to find statistical properties of dynamical systems quickly, reliably and abstractly.
@@ -12,7 +12,7 @@ GhostCoop is a package for quick and accurate approximation of one-dimensional c
 Take your favourite Markov uniformly expanding dynamical system and give it digital form:
 
 ```julia
-using GhostCoop, ApproxFun
+using Poltergeist, ApproxFun
 d = Interval(0,1)
 fv = [x->2x+sin(2pi*x)/8,x->2-2x]
 M = MarkovMap(d,fv,[0,1/2,1])
@@ -20,7 +20,7 @@ M(0.25), M'(0.25)
 ```
 <!---want to plot Markov Map--->
 
-Primarily, GhostCoop provides a very efficient and usable computer representation of transfer operators. Calling ```Transfer``` on a ```MarkovMap``` automatically creates a calculable computer representation of the transfer operator in a Chebyshev basis. Transfer operators are instantiated as Operator types, and can do (numerically) all the kinds of things one expects from linear operators on function spaces:
+Primarily, Poltergeist provides a very efficient and usable computer representation of transfer operators. Calling ```Transfer``` on a ```MarkovMap``` automatically creates a calculable computer representation of the transfer operator in a Chebyshev basis. Transfer operators are instantiated as Operator types, and can do (numerically) all the kinds of things one expects from linear operators on function spaces:
 
 ```julia
 L = Transfer(M)
@@ -31,7 +31,7 @@ sum(f1*Fun(sin,d)) # sum is total integral
 sum(f1*Fun(sin,d)) - sum(f0*Fun(x->sin(M(x)),d)) #definition of transfer operator as adjoint
 ``` 
 
-GhostCoop has built-in commands for calculating many standard dynamical objects:
+Poltergeist has built-in commands for calculating many standard dynamical objects:
 
 ```julia
 ρ = acim(L) # acim(M) also works but L is already cached
