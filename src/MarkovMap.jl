@@ -286,8 +286,8 @@ nbranches(m::MarkovMap) = length(m.branches)
 nneutral(m::MarkovMap) = sum([isa(b,NeutralBranch) for b in m.branches])
 getbranch(m::MarkovMap,x::Number) = in(x,domain(m)) ? findfirst([in(x,domain(b)) for b in m.branches]) : throw(DomainError)
 
-(m::MarkovMap)(i::Integer,x) = (m.branches[i])(x)
-(m::MarkovMap)(x::Number) = (m.branches[getbranch(m,x)])(x)
+@compat (m::MarkovMap)(i::Integer,x) = (m.branches[i])(x)
+@compat (m::MarkovMap)(x::Number) = (m.branches[getbranch(m,x)])(x)
 for FUN in (:mapD,:mapP)
  @eval $FUN(m::MarkovMap,x::Number) = $FUN(m.branches[getbranch(m,x)],x)
 end

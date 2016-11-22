@@ -84,6 +84,6 @@ type FullAcim{A,B,T,D,R,MM<:InducedMarkovMap}
 end
 FullAcim{A,B,T,D,R,MM<:InducedMarkovMap}(L::CachedOperator{A,B,ConcreteTransfer{T,D,R,MM}}) = FullAcim(L,acim(L))
 
-function (rhof::FullAcim)(x)
+@compat function (rhof::FullAcim)(x)
   dot(rhof.rho.coefficients,eltype(rhof.L)[transferfunction(x,getmap(rhof.L),domainspace(rhof.L.op),i,eltype(L)) for i = 1:length(rhof.rho.coefficients)])
 end

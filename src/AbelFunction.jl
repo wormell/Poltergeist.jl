@@ -139,7 +139,7 @@ function mapP{T}(R::AbelFunction{T},x::Number)
     return (mapasym(R,fromring(R,ringhconv(R,y))) + n,mapasymD(R,fromring(R,ringhconv(R,y)))/dv)
   end
 end
-(R::AbelFunction)(x::Number) = mapP(R,x)[1]
+@compat (R::AbelFunction)(x::Number) = mapP(R,x)[1]
 mapD(R::AbelFunction,x::Number) = mapP(R,x)[2]
 
 

@@ -93,4 +93,4 @@ end
 type FunctionDerivative{ff<:Function}
   f::ff
 end
-(fd::FunctionDerivative)(x::Number) = oftype(x,dualpart(fd.f(Dual(x,one(x)))))
+@compat (fd::FunctionDerivative)(x::Number) = oftype(x,dualpart(fd.f(Dual(x,one(x)))))
