@@ -29,7 +29,7 @@ function AbelFunction{T<:Real}(h,dh,cfs::Vector{Complex{T}},alpha::T,p::T,sgn::T
 end
 
 toring(R::AbelFunction,x) = -(R.sgn*(x-R.p)).^(-R.alpha)/(R.alpha*R.dh0)
-toringD(R::AbelFunction,x) = -(R.sgn*(x-R.p)).^(-R.alpha)/(x-R.p)
+toringD(R::AbelFunction,x) = (R.sgn*(x-R.p)).^(-R.alpha)/(x-R.p)/R.dh0
 fromring(R::AbelFunction,z) = R.p + R.sgn*(-R.alpha*R.dh0*z).^(-1/R.alpha)
 fromringD(R::AbelFunction,z) = R.sgn*R.dh0*(-R.alpha*R.dh0*z).^(-1/R.alpha - 1)
 
@@ -81,7 +81,10 @@ function AbelFunction{T<:Real,ff,gg}(h::ff,dh::gg,alpha::T,r0::T,p::T=zero(T),sg
   R
 end
 
-function hdisc_newton{T}(R::AbelFunction{T},y::Number,rad::T=abs(y)/max(0.1,1-abs(y)),tol=10eps(rad))
+hdisc_guess(R::AbelFunction,y) = abs(ringhconv(R,y)) > 3 ? ringhconv(R,ringhconv(R,y)-1) : y
+
+function hdisc_newton{T,U}(R::AbelFunction{T},y::U,rad::T=abs(y)/max(0.1,1-abs(y)),
+                         x::U=hdisc_guess(R,y),tol=10eps(rad))
   x = convert(typeof(y),rad*rand(typeof(real(y))))
   rhx = convert(T,R.h(x))
   rem = x*rhx^R.alpha - y
@@ -125,13 +128,13 @@ function mapP{T}(R::AbelFunction{T},x::Number)
   else
     n = 0
     y = ringhconv(R,toring(R,x))
-    dv = one(T)
+    dv = 1/(toringD(R,x)*ringhconvD(R,toring(R,x)))
     while abs(y) > abs(ringhconv(R,R.rd))
       y = hdisc_newton(R,y)
       rhy = R.h(y)
       dv *= rhy^R.alpha * (1 + R.alpha*y*R.dh(y)/rhy)
       n += 1
-      n == 100 && error("Backwards iteration failed in Abel function")
+      n == 200 && error("Backwards iteration failed in Abel function")
     end
     return (mapasym(R,fromring(R,ringhconv(R,y))) + n,mapasymD(R,fromring(R,ringhconv(R,y)))/dv)
   end
