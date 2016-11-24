@@ -1,4 +1,4 @@
-export MarkovMap, branch, nbranches, induce
+export MarkovMap, branch, nbranches, induce, NeutralBranch
 
 # MarkovBranch
 
@@ -173,7 +173,7 @@ branch{T<:Union{Number,Domain}}(f::Fun,b::T,args...) = branch(f,f',b,args...)
 
 
 for TYP in (:FwdExpandingBranch,:RevExpandingBranch,:NeutralBranch)
-  @eval (b::$TYP)(x::Number) = in(x,b.domain) ? unsafe_call(b,x) : throw(DomainError)
+  @eval @compat (b::$TYP)(x::Number) = in(x,b.domain) ? unsafe_call(b,x) : throw(DomainError)
   @eval mapD(b::$TYP,x::Number) = in(x,b.domain) ? unsafe_mapD(b,x) : error("DomainError: $x in $(b.domain)")
   @eval mapP(b::$TYP,x::Number) = in(x,b.domain) ? unsafe_mapP(b,x) : throw(DomainError)
   @eval domain(b::$TYP) = b.domain
@@ -385,4 +385,3 @@ end
 mapinvD(m::MarkovInverseCache,i::Integer,x::InterpolationNode) =
   isa(m.branches[i],RevExpandingBranch) ? mapinvD(m.m,i,mapinv(m,i,x)) : 1/mapD(m.m,i,mapinv(m,i,x))
 # mapDsign(m::MarkovInverseCache,i::Integer) = mapDsign(m.m,i)
-

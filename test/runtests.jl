@@ -12,45 +12,75 @@ fv1d(x) = 1/2+cos(2pi*x)/4; fv2d = fv1d
 #Periodic domain
 println("Fourier tests")
 d1 = PeriodicInterval([0,1])
-M1 = (MarkovMap(d1,[fv1,fv2],[fv1d,fv2d],[0,0.5,1],"rev"));
-acim(M1)
-@time rho1b = acim(M1)
+M1b = (MarkovMap(d1,[fv1,fv2],[fv1d,fv2d],[0,0.5,1],"rev"));
+acim(M1b)
+@time ρ1b = acim(M1b)
 
-M1a = MarkovMap(d1,[f1,f2],[f1d,f2d],[0,0.5,1])
-acim(M1a)
-@time rho1f = acim(M1a)
+M1f = MarkovMap(d1,[f1,f2],[f1d,f2d],[0,0.5,1])
+acim(M1f)
+@time ρ1f = acim(M1f)
 
 # Non-periodic domain
 println("Chebyshev tests")
 d2 = Interval([0,1])
 M2b = MarkovMap(d2,[fv1,fv2],[fv1d,fv2d],[0,0.5,1],"rev");
 acim(M2b)
-@time rho2b = acim(M2b)
+@time ρ2b = acim(M2b)
 
 M2ba = MarkovMap(d2,[fv1,fv2],[0,0.5,1],"rev"); #autodiff comparison
 acim(M2ba)
 Profile.clear()
-@time rho2ba = acim(M2ba)
+@time ρ2ba = acim(M2ba)
 
 
 
 M2f = MarkovMap(d2,[f1,f2],[0,0.5,1])
 acim(M2f)
-@time rho2f = acim(M2f)
+@time ρ2f = acim(M2f)
 
-pts = [points(space(rho1b),100);points(space(rho2b),100)]
-@test maxabs(rho1f(pts) - rho2f(pts)) < 200eps(1.)
-@test maxabs(rho1b(pts) - rho2b(pts)) < 200eps(1.)
-@test maxabs(rho2b(pts) - rho2ba(pts)) < 200eps(1.)
+pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
+@test maxabs(ρ1f(pts) - ρ2f(pts)) < 200eps(1.)
+@test maxabs(ρ1b(pts) - ρ2b(pts)) < 200eps(1.)
+@test maxabs(ρ2b(pts) - ρ2ba(pts)) < 200eps(1.)
 
+# Correlation sums
+A1 = Fun(x->sin(sin(2pi*x)),d1)
+A2 = Fun(x->sin(sin(2pi*x)),d2)
+cs1f = correlationsum(M1f,A1)
+@test maxabs(cs1f(pts)-correlationsum(M2f,A2)(pts)) < 20000eps(1.)
 
 #Inducing
 println("Inducing tests")
 M2bd = MarkovMap(d2,[fv1,fv2],[fv1d,fv2d],[0,0.5,1],"rev");
 M2bi = induce(M2bd,1)
 # acim(M2bi)
-@time rho2bi = acim(M2bi)
-pts = points(space(rho2bi),100)
-normi = diff(cumsum(rho2b)(∂(domain(M2bi))))[1]
-@test maxabs(rho2bi(pts) - rho2b(pts)/normi) < 200eps(1.)
+@time ρ2bi = acim(M2bi)
+pts = points(space(ρ2bi),100)
+normi = diff(cumsum(ρ2b)(∂(domain(M2bi))))[1]
+@test maxabs(ρ2bi(pts) - ρ2b(pts)/normi) < 200eps(1.)
 
+# Time series
+println("Time series tests")
+NI = 10^6; NB = 10^3
+@time ts = timeseries(M1f,NI,ρ1f)
+@test abs(sum(sin(sin(2pi*ts)))/NI - sum(ρ1f*A1))< (4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
+
+@time cts = timehist(M2f,NI,NB,ρ2f)
+@test abs(sum(sin(sin(2pi*cts[1][1:end-1])).*cts[2])/NI - sum(ρ2f*A2))< 1/NB+(4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
+
+# Intermittent maps
+println("Intermittent tests")
+for α in [0.22,1.3523]
+  println("α = $α")
+  @time b = NeutralBranch(x->1+2^α*x,x->2^α,α,0.6/2^α,Interval(0,0.5),Interval(0,1))
+  b2 = branch(x->(x+1)/2,x->0.5,Interval(0.5,1.),Interval(0.,1.),"rev")
+  Mint = MarkovMap(Interval(0.,1),Interval(0.,1),[b,b2])
+
+  Mint_I = induce(Mint,1)
+  L = Transfer(Mint_I)
+  @time ρint = acim(L)
+  println("Size of transfer operator: $(L.datasize)")
+  # TODO: FullAcim
+  # pts = points(domainspace(L),40)
+  # @time pfull =
+end
