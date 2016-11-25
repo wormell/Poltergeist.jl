@@ -5,7 +5,10 @@ acim(L::Operator,u::Fun=uniform(domainspace(L))) = SchurInv(L,u)\u
 acim(M::AbstractMarkovMap) = acim(Transfer(M))
 
 linearresponse(S::SchurInvWrapper,X::Fun) = S\(-acim(S)*X)'
-correlationsum(S::SchurInvWrapper,A::Fun) = S\(acim(S)*A)
+function correlationsum(S::SchurInvWrapper,A::Fun)
+  ra = (acim(S)*A)
+  S \ (ra - sum(ra)/sum(1,space(A)))
+end
 
 for OP in (:linearresponse,:correlationsum)
   @eval $OP(L::Operator,X::Fun) = $OP(SchurInv(L),X)
