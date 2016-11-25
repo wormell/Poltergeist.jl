@@ -11,7 +11,7 @@ fv1d(x) = 1/2+cos(2pi*x)/4; fv2d = fv1d
 
 #Periodic domain
 println("Fourier tests")
-d1 = PeriodicInterval([0,1])
+d1 = PeriodicInterval([0,1.])
 M1b = (MarkovMap(d1,[fv1,fv2],[fv1d,fv2d],[0,0.5,1],"rev"));
 acim(M1b)
 @time ρ1b = acim(M1b)
@@ -22,7 +22,7 @@ acim(M1f)
 
 # Non-periodic domain
 println("Chebyshev tests")
-d2 = Interval([0,1])
+d2 = Interval([0,1.])
 M2b = MarkovMap(d2,[fv1,fv2],[fv1d,fv2d],[0,0.5,1],"rev");
 acim(M2b)
 @time ρ2b = acim(M2b)
