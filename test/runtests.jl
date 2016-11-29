@@ -11,7 +11,7 @@ fv1d(x) = 1/2+cos(2pi*x)/4; fv2d = fv1d
 
 #Periodic domain
 println("Fourier tests")
-d1 = PeriodicInterval([0,1.])
+d1 = PeriodicInterval(0,1.)
 M1b = (MarkovMap(d1,[fv1,fv2],[fv1d,fv2d],[0,0.5,1],"rev"));
 acim(M1b)
 @time ρ1b = acim(M1b)
@@ -22,7 +22,7 @@ acim(M1f)
 
 # Non-periodic domain
 println("Chebyshev tests")
-d2 = Interval([0,1.])
+d2 = Interval(d1)
 M2b = MarkovMap(d2,[fv1,fv2],[fv1d,fv2d],[0,0.5,1],"rev");
 acim(M2b)
 @time ρ2b = acim(M2b)
@@ -42,6 +42,11 @@ pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
 @test maxabs(ρ1f(pts) - ρ2f(pts)) < 200eps(1.)
 @test maxabs(ρ1b(pts) - ρ2b(pts)) < 200eps(1.)
 @test maxabs(ρ2b(pts) - ρ2ba(pts)) < 200eps(1.)
+
+# Transfer
+@test transfer(M1f,x->sin(2pi*(x-1/2)),0.28531) == Poltergeist.transferfunction(0.28531,M1f,Poltergeist.BasisFun(Space(d1),2),Float64)
+@test_approx_eq transfer(M2f,exp,0.28531) (Transfer(M2f)*Fun(exp,Space(d2)))(0.28531)
+
 
 # Correlation sums
 A1 = Fun(x->sin(sin(2pi*x)),d1)

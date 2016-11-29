@@ -7,7 +7,7 @@ acim(M::AbstractMarkovMap) = acim(Transfer(M))
 linearresponse(S::SchurInvWrapper,X::Fun) = S\(-acim(S)*X)'
 function correlationsum(S::SchurInvWrapper,A::Fun)
   ra = (acim(S)*A)
-  S \ (ra - sum(ra)/sum(1,space(A)))
+  S \ (ra - sum(ra)/sum(Fun(1.,space(A))))
 end
 
 for OP in (:linearresponse,:correlationsum)

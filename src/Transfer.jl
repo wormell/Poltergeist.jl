@@ -1,4 +1,4 @@
-export Transfer
+export Transfer, transfer#, colstop, resizedata!
 
 abstract AbstractTransfer{T} <: Operator{T}
 
@@ -8,14 +8,6 @@ ApproxFun.israggedbelow(L::AbstractTransfer) = true
 #for OP in (:(ApproxFun.domain),:rangedomain)
 #    @eval $OP(L::AbstractTransfer) = $OP(getmap(L))
 #end
-
-Transfer(stuff...) = cache(ConcreteTransfer(stuff...))
-
-# fast colstop for transfer operators
-function ApproxFun.colstop{T<:Number,M<:AbstractTransfer,DS,RS}(B::ApproxFun.CachedOperator{T,RaggedMatrix{T},M,DS,RS,Tuple{Infinity{Bool}}},k::Integer)
-  ApproxFun.resizedata!(B,:,k)
-  B.data.cols[k+1] - B.data.cols[k]
-end
 
 immutable ConcreteTransfer{T,D<:Space,R<:Space,M<:AbstractMarkovMap} <: AbstractTransfer{T}
   m::M
@@ -30,6 +22,7 @@ immutable ConcreteTransfer{T,D<:Space,R<:Space,M<:AbstractMarkovMap} <: Abstract
     new{eltype(m),typeof(domainspace),typeof(rangespace),typeof(m)}(m,domainspace,rangespace,eltype(M)[])
   end
 end
+Transfer(stuff...) = cache(ConcreteTransfer(stuff...))
 
 ConcreteTransfer{T}(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
                     ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) =
@@ -62,82 +55,65 @@ end
 
 # transferbranch
 
-chebyTk(x,d,k::Integer) = cos((k-1)*acos(tocanonical(d,x))) #roundoff error grows linearly(??) with k may not be bad wrt x too
-function chebyTk_int(x,d,k::Integer)
-#   k == 1 && return tocanonical(d,x)/tocanonicalD(d,x)
-  k == 2 && return tocanonical(d,x)^2/2tocanonicalD(d,x)
-  ((k-1)*chebyTk(x,d,k+1) - k*tocanonical(d,x)*chebyTk(x,d,k))/((k-1)^2-1)/tocanonicalD(d,x)
-end
-function transferbranch(x,b::MarkovBranch,d::Chebyshev,k::Integer,T)
+function default_transferbranch(x,b::MarkovBranch,sk::BasisFun,T)
   (v,dvdx) = mapinvP(b,x)
-  abs(dvdx).*chebyTk(v,domain(d),k)
+  abs(dvdx).*getbasisfun(v,sk,T)
 end
-function transferbranch_int{D}(x,y,b::MarkovBranch,d::Chebyshev{D},k::Integer,T)
+function default_transferbranch_int(x,y,b::MarkovBranch,sk::BasisFun,T)
   vy = mapinv(b,y); vx = mapinv(b,x)
   sgn = sign((vy-vx)/(y-x))
-  sgn*(chebyTk_int(vy,domain(d),k) - chebyTk_int(vx,domain(d),k))
+  sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
 end
 
-fourierCSk(x,d,k::Integer) = rem(k,2) == 1 ? cos(fld(k,2)*tocanonical(d,x)) : sin(fld(k,2)*tocanonical(d,x))
-function fourierCSk_int(x,d,k::Integer)
-  k == 1 && return x
-  (rem(k,2) == 1 ? -sin(fld(k,2)*tocanonical(d,x)) : cos(fld(k,2)*tocanonical(d,x)))/
-    fld(k,2)/tocanonicalD(d,x)
-end
-function transferbranch{D}(x,b::MarkovBranch,d::Fourier{D},k::Integer,T)
+transferbranch(x,b::MarkovBranch,sk::BasisFun,T) = default_transferbranch(x,b,sk,T)
+transferbranch_int(x,y,b::MarkovBranch,sk::BasisFun,T) = default_transferbranch_int(x,y,b,sk,T)
+
+function transferbranch(x,b::MarkovBranch,f,T)
   (v,dvdx) = mapinvP(b,x)
-  abs(dvdx).*fourierCSk(v,domain(d),k)
+  abs(dvdx).*f(v)
 end
-function transferbranch_int{D}(x,y,b::MarkovBranch,d::Fourier{D},k::Integer,T)
+function transferbranch_int(x,b::MarkovBranch,f,T)
+  csf = cumsum(f)
+  (v,dvdx) = mapinvP(b,x)
   vy = mapinv(b,y); vx = mapinv(b,x)
   sgn = sign((vy-vx)/(y-x))
-  sgn*(fourierCSk_int(vy,domain(d),k) - fourierCSk_int(vx,domain(d),k))
+  sgn*(csf(vy)-csf(vx))
 end
 
-
-function default_transferbranch(x,b::MarkovBranch,d::Space,k::Integer,T)
-  fn = Fun(d,[zeros(T,k-1);one(T)]);
-  (v,dvdx) = mapinvP(b,x)
-  abs(dvdx).*fn(v)
-end
-function default_transferbranch_int(x,y,b::MarkovBranch,d::Space,k::Integer,T)
-  fn = cumsum(Fun(d,[zeros(T,k-1);one(T)]))
-  vy = mapinv(b,y); vx = mapinv(b,x)
-  sgn = sign((vy-vx)/(y-x))
-  sgn*(fn(vy)-fn(vx))
-end
-
-transferbranch(x,b,d,kk,T) = default_transferbranch(x,b,d,kk,T)
-transferbranch_int(x,y,b,d,kk,T) = default_transferbranch_int(x,y,b,d,kk,T)
 
 # Transfer function gives you values of LT(x)
 
-function transferfunction(x,m::MarkovMap,d::Space,k::Integer,T)
+function transferfunction(x,m::MarkovMap,sk,T)
   y = zero(x);
 
   for b in branches(m)
-    y += transferbranch(x,b,d,k,T)
+    y += transferbranch(x,b,sk,T)
   end;
   y
 end
 
-function transferfunction_int(x,y,m::MarkovMap,d::Space,k::Integer,T)
+function transferfunction_int(x,y,m::MarkovMap,sk,T)
   q = zero(x);
 
   for b in branches(m)
-    q += transferbranch_int(x,y,b,d,k,T)
+    q += transferbranch_int(x,y,b,sk,T)
   end;
   q
 end
 
-
+# Transfer a fun - to improve upon
+function transfer(m::MarkovMap,fn)
+  @inline tf(x) = transferfunction(x,m,fn,eltype(m))
+  Fun(tf,rangespace(L))
+end
+transfer(m::MarkovMap,fn,x) = transferfunction(x,m,fn,eltype(m))
 
 # Indexing
 
 transferfunction_nodes{TT,D,R,M<:AbstractMarkovMap}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
-  T[transferfunction(p,getmap(L),domainspace(L),kk,T) for p in points(rangespace(L),n)]
+  T[transferfunction(p,getmap(L),BasisFun(domainspace(L),kk),T) for p in points(rangespace(L),n)]
 transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
-  T[transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),getmap(L),domainspace(L),kk,T) for k = 1:n]
+  T[transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),getmap(L),BasisFun(domainspace(L),kk),T) for k = 1:n]
 
 
 function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range,padding::Bool=false)
@@ -159,7 +135,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
     tol =T==Any?200eps():200eps(T)
 
     if L.colstops[kk] >= 1
-      coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^max(4,convert(Int,ceil(log2(L.colstops[kk])))),kk,T))
+      coeffs = ApproxFun.transform(rs,transferfunction_nodes(getmap(L),2^max(4,convert(Int,ceil(log2(L.colstops[kk])))),kk,T))
       maxabsc = max(maxabs(coeffs),one(T))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs))/10)
     elseif L.colstops[kk]  == 0
@@ -172,7 +148,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       # code from ApproxFun (src/Fun/constructors.jl) - the difference is we start at n \approx mc
 
       r=ApproxFun.checkpoints(rs)
-      fr=[transferfunction(rr,getmap(L),domainspace(L),kk,T) for rr in r]
+      fr=[transferfunction(rr,getmap(L),BasisFun(domainspace(L),kk),T) for rr in r]
       maxabsfr=norm(fr,Inf)
 
       logn = min(convert(Int,ceil(log2(max(mc,16)))),20)
@@ -245,24 +221,30 @@ function ApproxFun.colstop(L::ConcreteTransfer,k::Integer)
   L.colstops[k]
 end
 
-function ApproxFun.resizedata!{T,D<:Domain,R<:Domain,M<:AbstractMarkovMap}(co::ApproxFun.CachedOperator{T,ApproxFun.RaggedMatrix{T},ConcreteTransfer{T,D,R,M}},::Colon,n::Integer)
+function ApproxFun.resizedata!{T<:Number,CT<:ConcreteTransfer}(co::ApproxFun.CachedOperator{T,RaggedMatrix{T},CT},::Colon,n::Integer)
   if n > co.datasize[2]
-    RO = transfer_getindex(co.op,(1,1,ApproxFun.∞),(co.datasize[2]+1):n,padding)
+    RO = transfer_getindex(co.op,(1,1,ApproxFun.∞),(co.datasize[2]+1):n,co.padding)
     if co.datasize[2] == 0
       co.data = RO
-      co.datasize = (co.data.K,n)
+      co.datasize = (co.data.m,n)
     else
       append!(co.data.data,RO.data)
-      append!(co.data.cols,RO.cols[2:end]+co.data.cols[end])
-      co.data.K = max(co.data.K,RO.K)
-      co.datasize = (co.data.K,n)
+      append!(co.data.cols,RO.cols[2:end]+co.data.cols[end]-1)
+      co.data.m = max(co.data.m,RO.m)
+      co.datasize = (co.data.m,n)
     end
   end
 
   co
 end
 
-function ApproxFun.colstop{T,D<:Domain,R<:Domain,M<:AbstractMarkovMap}(co::ApproxFun.CachedOperator{T,ApproxFun.RaggedMatrix{T},ConcreteTransfer{T,D,R,M}},n::Integer)
+function ApproxFun.colstop{T<:Number,DM<:AbstractMatrix,CT<:ConcreteTransfer}(co::ApproxFun.CachedOperator{T,DM,CT},n::Integer)
   ApproxFun.resizedata!(co,:,n)
   ApproxFun.colstop(co.data,n)
 end
+
+# # fast colstop for cached operators
+# function ApproxFun.colstop{T,M<:ConcreteTransfer,DS<:Space,RS<:Space}(B::ApproxFun.CachedOperator{T,RaggedMatrix{T},M,DS,RS,Tuple{Infinity{Bool}}},k::Integer)
+#   ApproxFun.resizedata!(B,:,k)
+#   ApproxFun.colstop(co.op,k)
+# end

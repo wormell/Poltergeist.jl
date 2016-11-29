@@ -28,6 +28,8 @@ function AbelFunction{T<:Real}(h,dh,cfs::Vector{Complex{T}},alpha::T,p::T,sgn::T
   AbelFunction{T,typeof(h),typeof(dh)}(h,dh,cfs,alpha,p,sgn,r0,rd,rab,dh0,offset)
 end
 
+toh(R::AbelFunction,x) = (R.sgn*(x-R.p)).^R.alpha
+fromh(R::AbelFunction,x) = R.p + R.sgn*x.^(-1/R.alpha)
 toring(R::AbelFunction,x) = -(R.sgn*(x-R.p)).^(-R.alpha)/(R.alpha*R.dh0)
 toringD(R::AbelFunction,x) = (R.sgn*(x-R.p)).^(-R.alpha)/(x-R.p)/R.dh0
 fromring(R::AbelFunction,z) = R.p + R.sgn*(-R.alpha*R.dh0*z).^(-1/R.alpha)
@@ -100,11 +102,28 @@ function hdisc_newton{T,U}(R::AbelFunction{T},y::U,rad::T=abs(y)/max(0.1,1-abs(y
 
 end
 
+function mapasym_mα(R::AbelFunction,xmα) #clean
+  y = zero(xmα)
+  z = -xmα/(R.alpha*R.dh0)
+  zpow = z^(1-length(R.cfs))
+  for i = length(R.cfs):-1:2
+    y += R.cfs[i]*zpow/(1-i)
+    zpow *= z
+  end
+  y += R.cfs[1]*log(-z)
+  y += R.offset
+  y += z
+  y
+end
+
+
 function mapasym(R::AbelFunction,x)
   y = zero(x)
   z = toring(R,x)
+  zpow = z^(1-length(R.cfs))
   for i = length(R.cfs):-1:2
-    y += R.cfs[i]*z.^(1-i)/(1-i)
+    y += R.cfs[i]*zpow/(1-i)
+    zpow *= z
   end
   y += R.cfs[1]*log(-z)
   y += R.offset
@@ -114,8 +133,10 @@ end
 function mapasymD(R::AbelFunction,x)
   y = zero(x)
   z = toring(R,x)
+  zpow = z^(-length(R.cfs))
   for i = length(R.cfs):-1:1
-    y += R.cfs[i]*z.^(-i)
+    y += R.cfs[i]*zpow
+    zpow *= z
   end
   y += 1
   y*toringD(R,x)
@@ -152,5 +173,3 @@ end
 #mapasym_recip(R::AbelFunction,x::Number) =1/mapasym(R,x)
 #mapasym_recipD(R::AbelFunction,x::Number) = mapasymD(R,x)/mapasym(R,x)^2
 #function mapasyminv(R::AbelFunction,x::Number)
-
-
