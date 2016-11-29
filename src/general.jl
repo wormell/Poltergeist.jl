@@ -94,3 +94,31 @@ type FunctionDerivative{ff<:Function}
   f::ff
 end
 @compat (fd::FunctionDerivative)(x::Number) = oftype(x,dualpart(fd.f(Dual(x,one(x)))))
+
+type BasisFun{S<:Space,II<:Integer}
+  s::S
+  k::II
+end
+@compat (b::BasisFun)(x) = getbasisfun(x,sk,eltype(sk.s))
+getbasisfun(x,sk::BasisFun,T) = Fun(sk.s,[zeros(T,sk.k-1);one(T)])(x)
+getbasisfun_int(x,sk::BasisFun,T) = cumsum(Fun(sk.s,[zeros(T,sk.k-1);one(T)]))(x)
+
+#specialised getbasisfuns
+
+fourierCSk(x,d,k::Integer) = rem(k,2) == 1 ? cos(fld(k,2)*tocanonical(d,x)) : sin(fld(k,2)*tocanonical(d,x))
+function fourierCSk_int(x,d,k::Integer)
+  k == 1 && return x
+  (rem(k,2) == 1 ? -sin(fld(k,2)*tocanonical(d,x)) : cos(fld(k,2)*tocanonical(d,x)))/
+    fld(k,2)/tocanonicalD(d,x)
+end
+getbasisfun{F<:Fourier,K<:Integer}(x,sk::BasisFun{F,K},T) = fourierCSk(x,domain(sk.s),sk.k)
+getbasisfun_int{F<:Fourier,K<:Integer}(x,sk::BasisFun{F,K},T) = fourierCSk_int(x,domain(sk.s),sk.k)
+
+chebyTk(x,d,k::Integer) = cos((k-1)*acos(tocanonical(d,x))) #roundoff error grows linearly(??) with k may not be bad wrt x too
+function chebyTk_int(x,d,k::Integer)
+#   k == 1 && return tocanonical(d,x)/tocanonicalD(d,x)
+  k == 2 && return tocanonical(d,x)^2/2tocanonicalD(d,x)
+  ((k-1)*chebyTk(x,d,k+1) - k*tocanonical(d,x)*chebyTk(x,d,k))/((k-1)^2-1)/tocanonicalD(d,x)
+end
+getbasisfun{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K},T) = chebyTk(x,domain(sk.s),sk.k)
+getbasisfun_int{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K},T) = chebyTk_int(x,domain(sk.s),sk.k)

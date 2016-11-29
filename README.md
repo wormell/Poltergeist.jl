@@ -1,7 +1,7 @@
 # Poltergeist.jl 🏏👻
 
-[![Build Status](https://travis-ci.org/johnwormell/Poltergeist.jl.svg?branch=master)](https://travis-ci.org/johnwormell/Poltergeist.jl)
-[![Coverage Status](https://coveralls.io/repos/github/johnwormell/Poltergeist.jl/badge.svg?branch=master)](https://coveralls.io/github/johnwormell/Poltergeist.jl?branch=master)
+[![Build Status](https://travis-ci.org/wormell/Poltergeist.jl.svg?branch=master)](https://travis-ci.org/wormell/Poltergeist.jl)
+[![Coverage Status](https://coveralls.io/repos/github/wormell/Poltergeist.jl/badge.svg?branch=master)](https://coveralls.io/github/wormell/Poltergeist.jl?branch=master)
 
 Poltergeist is a package for quick and accurate approximation of one-dimensional chaotic dynamical systems. It is geared towards spectral methods* and uses spectral methods^† for its numerical implementation. Poltergeist relies on and closely interfaces with the adaptive function approximation package [ApproxFun](https://github.com/ApproxFun/ApproxFun.jl).  
 
