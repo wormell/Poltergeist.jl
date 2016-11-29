@@ -1,4 +1,4 @@
-Pkg.installed()["ApproxFun"] != v"0.4.0+" && Pkg.checkout("ApproxFun","development")
+Pkg.installed()["ApproxFun"] != v"0.4.0+" && Pkg.checkout("ApproxFun","4bcc8f585361184342bb21780cc6be9893d99ce6")
 using Poltergeist
 using Base.Test
 using ApproxFun
