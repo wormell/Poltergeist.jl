@@ -111,8 +111,8 @@ function fourierCSk_int(x,d,k::Integer)
   (rem(k,2) == 1 ? -sin(fld(k,2)*tocanonical(d,x)) : cos(fld(k,2)*tocanonical(d,x)))/
     fld(k,2)/tocanonicalD(d,x)
 end
-getbasisfun{F<:Fourier,K<:Integer}(x,sk::BasisFun{F,K},T) = fourierCSk(x,domain(sk.s),sk.k)
-getbasisfun_int{F<:Fourier,K<:Integer}(x,sk::BasisFun{F,K},T) = fourierCSk_int(x,domain(sk.s),sk.k)
+getbasisfun{DD,K<:Integer}(x,sk::BasisFun{Fourier{DD},K},T) = fourierCSk(x,domain(sk.s),sk.k)
+getbasisfun_int{DD,K<:Integer}(x,sk::BasisFun{Fourier{DD},K},T) = fourierCSk_int(x,domain(sk.s),sk.k)
 
 chebyTk(x,d,k::Integer) = cos((k-1)*acos(tocanonical(d,x))) #roundoff error grows linearly(??) with k may not be bad wrt x too
 function chebyTk_int(x,d,k::Integer)

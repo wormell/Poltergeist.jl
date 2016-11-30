@@ -83,6 +83,7 @@ for α in [0.22,1.3523]
   Mint = MarkovMap(Interval(0.,1),Interval(0.,1),[b,b2])
 
   Mint_I = induce(Mint,1)
+  ρint = acim(Transfer(Mint_I))
   L = Transfer(Mint_I)
   @time ρint = acim(L)
   println("Size of transfer operator: $(L.datasize)")
