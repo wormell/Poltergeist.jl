@@ -136,13 +136,13 @@ end
 function branch{ff,gg,T<:Number,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},bl::Vector{T},bu::Vector{T},ran::R,dir::String="fwd")
   @assert length(bl) == length(fs)
   @assert length(bu) == length(fs)
-  branch(fs,dfdxs,ApproxFun.Interval{T}[Interval(bl[i],bu[i]) for i = 1:length(bl)],ran,dir)
+  branch(fs,dfdxs,ApproxFun.Segment{T}[Segment(bl[i],bu[i]) for i = 1:length(bl)],ran,dir)
 end
 
 function branch{ff,gg,T<:Number,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},b::Vector{T},ran::R,dir::String="fwd")
   @assert length(fs) == (length(b)-1)
   @assert issorted(b)
-  branch(fs,dfdxs,ApproxFun.Interval{T}[Interval(b[i],b[i+1]) for i = 1:length(b)-1],ran,dir)
+  branch(fs,dfdxs,ApproxFun.Segment{T}[Segment(b[i],b[i+1]) for i = 1:length(b)-1],ran,dir)
 end
 
 function autodiff_dual(f,bi::Number)
@@ -336,7 +336,7 @@ function mapP(m::InducedMarkovMap,x)
   end
   y
 end
-(m::InducedMarkovMap)(x) = mapP(m,x)[1]
+@compat (m::InducedMarkovMap)(x) = mapP(m,x)[1]
 mapD(m::InducedMarkovMap,x) = mapP(m,x)[2]
 
 
