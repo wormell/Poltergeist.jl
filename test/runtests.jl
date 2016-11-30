@@ -1,4 +1,5 @@
-Pkg.installed()["ApproxFun"] != v"0.4.0+" && Pkg.checkout("ApproxFun","4bcc8f585361184342bb21780cc6be9893d99ce6")
+# Pkg.installed()["ApproxFun"] != v"0.4.0+" && Pkg.checkout("ApproxFun","4bcc8f585361184342bb21780cc6be9893d99ce6")
+
 using Poltergeist
 using Base.Test
 using ApproxFun
@@ -29,7 +30,6 @@ acim(M2b)
 
 M2ba = MarkovMap(d2,[fv1,fv2],[0,0.5,1],"rev"); #autodiff comparison
 acim(M2ba)
-Profile.clear()
 @time ρ2ba = acim(M2ba)
 
 
@@ -44,7 +44,7 @@ pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
 @test maxabs(ρ2b(pts) - ρ2ba(pts)) < 200eps(1.)
 
 # Transfer
-@test transfer(M1f,x->sin(2pi*(x-1/2)),0.28531) == Poltergeist.transferfunction(0.28531,M1f,Poltergeist.BasisFun(Space(d1),2),Float64)
+@test transfer(M1f,x->Fun(Fourier(d1),[0.,1.])(x),0.28531) == Poltergeist.transferfunction(0.28531,M1f,Poltergeist.BasisFun(Fourier(d1),2),Float64)
 @test_approx_eq transfer(M2f,exp,0.28531) (Transfer(M2f)*Fun(exp,Space(d2)))(0.28531)
 
 
@@ -78,6 +78,7 @@ println("Intermittent tests")
 for α in [0.22,1.3523]
   println("α = $α")
   @time b = NeutralBranch(x->1+2^α*x,x->2^α,α,0.6/2^α,Interval(0,0.5),Interval(0,1))
+  # @time b = NeutralBranch(x->1+2^α*x,x->2^α,α,0.6/2^α,Interval(0,0.5),Interval(0,1))
   b2 = branch(x->(x+1)/2,x->0.5,Interval(0.5,1.),Interval(0.,1.),"rev")
   Mint = MarkovMap(Interval(0.,1),Interval(0.,1),[b,b2])
 
