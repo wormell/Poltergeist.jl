@@ -28,8 +28,8 @@ function AbelFunction{T<:Real}(h,dh,cfs::Vector{Complex{T}},alpha::T,p::T,sgn::T
   AbelFunction{T,typeof(h),typeof(dh)}(h,dh,cfs,alpha,p,sgn,r0,rd,rab,dh0,offset)
 end
 
-toh(R::AbelFunction,x) = (R.sgn*(x-R.p)).^R.alpha
-fromh(R::AbelFunction,x) = R.p + R.sgn*x.^(-1/R.alpha)
+# toh(R::AbelFunction,x) = (R.sgn*(x-R.p)).^R.alpha
+# fromh(R::AbelFunction,x) = R.p + R.sgn*x.^(-1/R.alpha)
 toring(R::AbelFunction,x) = -(R.sgn*(x-R.p)).^(-R.alpha)/(R.alpha*R.dh0)
 toringD(R::AbelFunction,x) = (R.sgn*(x-R.p)).^(-R.alpha)/(x-R.p)/R.dh0
 fromring(R::AbelFunction,z) = R.p + R.sgn*(-R.alpha*R.dh0*z).^(-1/R.alpha)

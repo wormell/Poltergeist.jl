@@ -22,22 +22,18 @@ immutable ConcreteTransfer{T,D<:Space,R<:Space,M<:AbstractMarkovMap} <: Abstract
     new{eltype(m),typeof(domainspace),typeof(rangespace),typeof(m)}(m,domainspace,rangespace,eltype(M)[])
   end
 end
-Transfer(stuff...) = cache(ConcreteTransfer(stuff...))
+Transfer(stuff...;padding=false) = cache(ConcreteTransfer(stuff...),padding=padding)
 
 ConcreteTransfer{T}(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
                     ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) =
   ConcreteTransfer{T,typeof(dom),typeof(ran),typeof(m)}(m,dom,ran)#,domainspace(m),rangespace(m))
+ConcreteTransfer(m,dom,ran) = ConcreteTransfer(eltype(m),m,dom,ran)
 
 for OP in (:domainspace,:rangespace)
   @eval ApproxFun.$OP(L::ConcreteTransfer) = L.$OP
 end
 
 getmap(L::ConcreteTransfer) = L.m
-
-Transfer{T}(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
-            ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) = cache(ConcreteTransfer(T,m,dom,ran),padding=true)
-Transfer(m::AbstractMarkovMap,dom::Space=Space(domain(m)),
-         ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) = cache(ConcreteTransfer(eltype(m),m,dom,ran),padding=true)
 
 function resizecolstops!(L::ConcreteTransfer,n)
   colstopslength = length(L.colstops)
@@ -135,7 +131,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
     tol =T==Any?200eps():200eps(T)
 
     if L.colstops[kk] >= 1
-      coeffs = ApproxFun.transform(rs,transferfunction_nodes(getmap(L),2^max(4,convert(Int,ceil(log2(L.colstops[kk])))),kk,T))
+      coeffs = ApproxFun.transform(rs,transferfunction_nodes(getmap(L),2^max(4,nextpow2(L.colstops[kk])),kk,T))
       maxabsc = max(maxabs(coeffs),one(T))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs))/10)
     elseif L.colstops[kk]  == 0
@@ -151,7 +147,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       fr=[transferfunction(rr,getmap(L),BasisFun(domainspace(L),kk),T) for rr in r]
       maxabsfr=norm(fr,Inf)
 
-      logn = min(convert(Int,ceil(log2(max(mc,16)))),20)
+      logn = min(round(Int,log2(max(mc,16)),RoundUp),20)
       while logn < 21
         coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
 
