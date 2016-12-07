@@ -120,11 +120,11 @@ end
 
 # branch constructors
 
-branch{ff,gg,D<:Domain,R<:Domain}(f::ff,dfdx::gg,dom::D,ran::R,dir::String="fwd",ftype::Type{ff}=ff,dfdxtype::Type{gg}=gg) =
+branch{ff,gg,D<:Domain,R<:Domain}(f::ff,dfdx::gg,dom::D,ran::R,dir::AbstractString="fwd",ftype::Type{ff}=ff,dfdxtype::Type{gg}=gg) =
   dir=="fwd" ? FwdExpandingBranch{ftype,dfdxtype,typeof(dom),typeof(ran)}(f,dfdx,dom,ran) : RevExpandingBranch{ftype,dfdxtype,typeof(dom),typeof(ran)}(f,dfdx,dom,ran)
 
 
-function branch{ff,gg,D<:Domain,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},doms::Vector{D},ran::R,dir::String="fwd")
+function branch{ff,gg,D<:Domain,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},doms::Vector{D},ran::R,dir::AbstractString="fwd")
   @assert length(fs) == length(dfdxs)
   @assert length(doms) == length(fs)
   ftype = promote_type([typeof(f) for f in fs]...)
@@ -133,13 +133,13 @@ function branch{ff,gg,D<:Domain,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},doms
   RevExpandingBranch{ftype,dfdxtype,D,R}
   TYP[branch(fs[i],dfdxs[i],doms[i],ran,dir,ftype,dfdxtype) for i = 1:length(fs)]
 end
-function branch{ff,gg,T<:Number,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},bl::Vector{T},bu::Vector{T},ran::R,dir::String="fwd")
+function branch{ff,gg,T<:Number,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},bl::Vector{T},bu::Vector{T},ran::R,dir::AbstractString="fwd")
   @assert length(bl) == length(fs)
   @assert length(bu) == length(fs)
   branch(fs,dfdxs,ApproxFun.Segment{T}[Segment(bl[i],bu[i]) for i = 1:length(bl)],ran,dir)
 end
 
-function branch{ff,gg,T<:Number,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},b::Vector{T},ran::R,dir::String="fwd")
+function branch{ff,gg,T<:Number,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},b::Vector{T},ran::R,dir::AbstractString="fwd")
   @assert length(fs) == (length(b)-1)
   @assert issorted(b)
   branch(fs,dfdxs,ApproxFun.Segment{T}[Segment(b[i],b[i+1]) for i = 1:length(b)-1],ran,dir)
@@ -198,8 +198,8 @@ immutable MarkovMap{D<:Domain,R<:Domain,B<:MarkovBranch} <: AbstractMarkovMap{D,
   rangedomain::R
   branches::Vector{B}
   function MarkovMap(dom,ran,branches)
-    @assert all([issubset(b.domain,dom) for b in branches])
-    @assert all([b.rangedomain == ran for b in branches])
+    @assert all(b->issubset(b.domain,dom),branches)
+    @assert all(b->(b.rangedomain == ran),branches)
     for i = 1:length(branches)
       for j = 1:i-1
         ~isempty(branches[i].domain ∩ branches[j].domain) && error("Overlapping domains in branches $i and $j")
@@ -215,15 +215,15 @@ MarkovMap{D<:Domain,R<:Domain,B<:MarkovBranch}(dom::D,ran::R,branches::Vector{B}
 #   MarkovMap{T,ff}(dom,ran,f,dfdx,bl,bu)
 
 function MarkovMap{D<:Domain,R<:Domain}(
-    dom::D,ran::R,v1::Vector,v2::Vector,dir::String="fwd")
+    dom::D,ran::R,v1::Vector,v2::Vector,dir::AbstractString="fwd")
   MarkovMap(dom,ran,branch(v1,v2,ran,dir))
 end
 function MarkovMap{D<:Domain,R<:Domain}(
-    dom::D,ran::R,v1::Vector,v2::Vector,v3::Vector,dir::String="fwd")
+    dom::D,ran::R,v1::Vector,v2::Vector,v3::Vector,dir::AbstractString="fwd")
   MarkovMap(dom,ran,branch(v1,v2,v3,ran,dir))
 end
 function MarkovMap{D<:Domain,R<:Domain}(
-    dom::D,ran::R,v1::Vector,v2::Vector,v3::Vector,v4::Vector,dir::String="fwd")
+    dom::D,ran::R,v1::Vector,v2::Vector,v3::Vector,v4::Vector,dir::AbstractString="fwd")
   MarkovMap(dom,ran,branch(v1,v2,v3,v4,ran,dir))
 end
 
@@ -273,7 +273,7 @@ function MarkovMap{D,R,ff}(
   MarkovMap(dom,ran,f,dfdx,bl,bu)
 end
 #MarkovMap(dom::D,ran::R,f::Vector{ff},dfdx::Vector{ff}) = MarkovMap{D,R,eltype(R),ff}(dom,ran,f,dfdx)
-MarkovMap{ff<:ApproxFun.Fun}(dom,ran,f::Vector{ff}) = MarkovMap(dom,ran,f,[fi' for fi in f])
+MarkovMap{ff<:ApproxFun.Fun}(dom::Domain,ran::Domain,f::Vector{ff}) = MarkovMap(dom,ran,f,[fi' for fi in f])
 
 # function MarkovMap{ff,gg}(dom::Domain,ran::Domain,f::Vector{ff},dfdx::Vector{gg},args...)
 #   pp = promote_type(ff,gg)
