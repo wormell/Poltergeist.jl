@@ -27,7 +27,7 @@ Transfer(stuff...;padding=false) = cache(ConcreteTransfer(stuff...),padding=padd
 ConcreteTransfer{T}(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
                     ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) =
   ConcreteTransfer{T,typeof(dom),typeof(ran),typeof(m)}(m,dom,ran)#,domainspace(m),rangespace(m))
-ConcreteTransfer(m,dom,ran) = ConcreteTransfer(eltype(m),m,dom,ran)
+ConcreteTransfer(m,dom::Space=Space(domain(m)),ran=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) = ConcreteTransfer(eltype(m),m,dom,ran)
 
 for OP in (:domainspace,:rangespace)
   @eval ApproxFun.$OP(L::ConcreteTransfer) = L.$OP

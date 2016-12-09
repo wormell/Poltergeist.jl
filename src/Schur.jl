@@ -11,7 +11,7 @@ ApproxFun.qrfact(op::SchurInvWrapper) = op
 #SchurInvWrapper(op::Operator) = SchurInvWrapper(op,uniform(domainspace(op)))
 ApproxFun.@wrapper SchurInvWrapper
 
-ApproxFun.linsolve{S,T,DD,dim}(A::SchurInvWrapper,b::Fun{MatrixSpace{S,T,DD,dim}};kwds...) = linsolve(L.op,b;kwds...) # avoid method ambiguity
+#ApproxFun.linsolve{S,T,DD,dim}(A::SchurInvWrapper,b::Fun{MatrixSpace{S,T,DD,dim}};kwds...) = linsolve(L.op,b;kwds...) # avoid method ambiguity
 ApproxFun.linsolve(L::SchurInvWrapper,b;kwds...) = linsolve(L.op,b;kwds...)
 
 uniform(S::Space) = Fun(1.,S)/sum(Fun(1.,S))
