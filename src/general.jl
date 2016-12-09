@@ -53,7 +53,7 @@ function interval_newton{T,U<:Real}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*rand(
   abs(rem) > tol && error("Newton: failure to converge")
   x
 end
-interval_newton(f,df,y::Number,D::Domain,tol=10eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,tol)
+interval_newton{U<:Union{Real,Complex}}(f,df,y::U,D::Domain,x::U=(da+(db-da)*rand(typeof(y))),tol=10eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,x,tol)
 interval_guess(y::Number,dom::Domain,ran::Domain) = (dom.a*ran.b-ran.a*dom.b+y*(dom.b-dom.a))/(ran.b-ran.a)
 
 function interval_newton{T,U<:Complex}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*rand(typeof(y))),tol=10eps(max(abs(da),abs(db))))

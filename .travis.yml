@@ -9,12 +9,12 @@ julia:
 notifications:
   email: false
 # uncomment the following lines to override the default test script
-script:
-  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'versioninfo()'
-  - julia --color=yes -e 'Pkg.clone(pwd())'
-  - julia --color=yes -e 'Pkg.add("ApproxFun"); Pkg.checkout("ApproxFun","development"); using ApproxFun'
-  - julia --color=yes -e 'Pkg.build("Poltergeist"); Pkg.test("Poltergeist"; coverage=true)'
+# script:
+#   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+#   - julia -e 'versioninfo()'
+#   - julia --color=yes -e 'Pkg.clone(pwd())'
+#   - julia --color=yes -e 'Pkg.add("ApproxFun"); Pkg.checkout("ApproxFun","development"); using ApproxFun'
+#   - julia --color=yes -e 'Pkg.build("Poltergeist"); Pkg.test("Poltergeist"; coverage=true)'
 after_success:
   # push coverage results to Coveralls
   - julia -e 'cd(Pkg.dir("Poltergeist")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
