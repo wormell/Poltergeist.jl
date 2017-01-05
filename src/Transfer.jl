@@ -19,7 +19,7 @@ immutable ConcreteTransfer{T,D<:Space,R<:Space,M<:AbstractMarkovMap} <: Abstract
     @assert domain(m)==domain(domainspace)
     @assert rangedomain(m)==domain(rangespace)
     nneutral(m) != 0 && error("Neutral fixed points not supported for transfer operator")
-    new{eltype(m),typeof(domainspace),typeof(rangespace),typeof(m)}(m,domainspace,rangespace,eltype(M)[])
+    new{eltype(eltype(m)),typeof(domainspace),typeof(rangespace),typeof(m)}(m,domainspace,rangespace,eltype(M)[])
   end
 end
 Transfer(stuff...;padding=false) = cache(ConcreteTransfer(stuff...),padding=padding)
@@ -53,7 +53,7 @@ end
 
 function default_transferbranch(x,b::MarkovBranch,sk::BasisFun,T)
   (v,dvdx) = mapinvP(b,x)
-  abs(dvdx).*getbasisfun(v,sk,T)
+  abs(det(dvdx)).*getbasisfun(v,sk,T)
 end
 function default_transferbranch_int(x,y,b::MarkovBranch,sk::BasisFun,T)
   vy = mapinv(b,y); vx = mapinv(b,x)
@@ -66,7 +66,7 @@ transferbranch_int(x,y,b::MarkovBranch,sk::BasisFun,T) = default_transferbranch_
 
 function transferbranch(x,b::MarkovBranch,f,T)
   (v,dvdx) = mapinvP(b,x)
-  abs(dvdx).*f(v)
+  abs(det(dvdx)).*f(v)
 end
 function transferbranch_int(x,b::MarkovBranch,f,T)
   csf = cumsum(f)
@@ -80,7 +80,7 @@ end
 # Transfer function gives you values of LT(x)
 
 function transferfunction(x,m::MarkovMap,sk,T)
-  y = zero(x);
+  y = zero(eltype(x));
 
   for b in branches(m)
     y += transferbranch(x,b,sk,T)
@@ -89,7 +89,7 @@ function transferfunction(x,m::MarkovMap,sk,T)
 end
 
 function transferfunction_int(x,y,m::MarkovMap,sk,T)
-  q = zero(x);
+  q = zero(eltype(x));
 
   for b in branches(m)
     q += transferbranch_int(x,y,b,sk,T)
@@ -99,8 +99,8 @@ end
 
 # Transfer a fun - to improve upon
 function transfer(m::MarkovMap,fn)
-  @inline tf(x) = transferfunction(x,m,fn,eltype(m))
-  Fun(tf,rangespace(L))
+  @inline tf(x) = transferfunction(x,m,fn,eltype(eltype(m)))
+  Fun(tf,rangespace(m)) # TODO: MarkovMaps don't have spaces
 end
 transfer(m::MarkovMap,fn,x) = transferfunction(x,m,fn,eltype(m))
 
