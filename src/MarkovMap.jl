@@ -22,12 +22,12 @@ end
 FwdExpandingBranch{D<:Domain,R<:Domain,ff,gg}(f::ff,dfdx::gg,dom::D,ran::R) =
   FwdExpandingBranch{typeof(f),typeof(dfdx),typeof(dom),typeof(ran)}(f,dfdx,dom,ran)
 
-unsafe_call(b::FwdExpandingBranch,x::Number) = b.f(x)
-unsafe_mapD(b::FwdExpandingBranch,x::Number) = b.dfdx(x)
-unsafe_mapP(b::FwdExpandingBranch,x::Number) = (unsafe_call(b,x),unsafe_mapD(b,x))
-mapinv(b::FwdExpandingBranch,x::Number) = interval_newton(b.f,b.dfdx,x,b.domain,interval_guess(x,b.domain,b.rangedomain))
-mapinvD(b::FwdExpandingBranch,x::Number) = 1/b.dfdx(mapinv(b,x))
-function mapinvP(b::FwdExpandingBranch,x::Number)
+unsafe_call(b::FwdExpandingBranch,x) = b.f(x)
+unsafe_mapD(b::FwdExpandingBranch,x) = b.dfdx(x)
+unsafe_mapP(b::FwdExpandingBranch,x) = (unsafe_call(b,x),unsafe_mapD(b,x))
+mapinv(b::FwdExpandingBranch,x) = interval_newton(b.f,b.dfdx,x,b.domain,interval_guess(x,b.domain,b.rangedomain))
+mapinvD(b::FwdExpandingBranch,x) = 1/b.dfdx(mapinv(b,x))
+function mapinvP(b::FwdExpandingBranch,x)
   vx = mapinv(b,x)
   (vx,1/unsafe_mapD(b,vx))
 end
@@ -48,15 +48,15 @@ end
 RevExpandingBranch{ff,gg,D<:Domain,R<:Domain}(v::ff,dvdx::gg,dom::D,ran::R) =
   RevExpandingBranch{typeof(v),typeof(dvdx),typeof(dom),typeof(ran)}(v,dvdx,dom,ran)
 
-unsafe_call(b::RevExpandingBranch,x::Number) = interval_newton(b.v,b.dvdx,x,b.rangedomain,interval_guess(x,b.rangedomain,b.domain))
-unsafe_mapD(b::RevExpandingBranch,x::Number) =  1/b.dvdx(unsafe_call(b,x))
-function unsafe_mapP(b::RevExpandingBranch,x::Number)
+unsafe_call(b::RevExpandingBranch,x) = interval_newton(b.v,b.dvdx,x,b.rangedomain,interval_guess(x,b.rangedomain,b.domain))
+unsafe_mapD(b::RevExpandingBranch,x) =  1/b.dvdx(unsafe_call(b,x))
+function unsafe_mapP(b::RevExpandingBranch,x)
   fx = unsafe_call(b,x)
   (fx,1/mapinvD(b,fx))
 end
-mapinv(b::RevExpandingBranch,x::Number) = b.v(x)
-mapinvD(b::RevExpandingBranch,x::Number) = b.dvdx(x)
-mapinvP(b::RevExpandingBranch,x::Number) = (mapinv(b,x),mapinvD(b,x))
+mapinv(b::RevExpandingBranch,x) = b.v(x)
+mapinvD(b::RevExpandingBranch,x) = b.dvdx(x)
+mapinvP(b::RevExpandingBranch,x) = (mapinv(b,x),mapinvD(b,x))
 
 
 
@@ -173,9 +173,9 @@ branch{T<:Union{Number,Domain}}(f::Fun,b::T,args...) = branch(f,f',b,args...)
 
 
 for TYP in (:FwdExpandingBranch,:RevExpandingBranch,:NeutralBranch)
-  @eval @compat (b::$TYP)(x::Number) = in(x,b.domain) ? unsafe_call(b,x) : throw(DomainError)
-  @eval mapD(b::$TYP,x::Number) = in(x,b.domain) ? unsafe_mapD(b,x) : error("DomainError: $x in $(b.domain)")
-  @eval mapP(b::$TYP,x::Number) = in(x,b.domain) ? unsafe_mapP(b,x) : throw(DomainError)
+  @eval @compat (b::$TYP)(x) = in(x,b.domain) ? unsafe_call(b,x) : throw(DomainError)
+  @eval mapD(b::$TYP,x) = in(x,b.domain) ? unsafe_mapD(b,x) : error("DomainError: $x in $(b.domain)")
+  @eval mapP(b::$TYP,x) = in(x,b.domain) ? unsafe_mapP(b,x) : throw(DomainError)
   @eval domain(b::$TYP) = b.domain
   @eval rangedomain(b::$TYP) = b.rangedomain
 end
@@ -205,7 +205,7 @@ immutable MarkovMap{D<:Domain,R<:Domain,B<:MarkovBranch} <: AbstractMarkovMap{D,
         ~isempty(branches[i].domain ∩ branches[j].domain) && error("Overlapping domains in branches $i and $j")
       end
     end
-    arclength(dom)/sum([arclength(b.domain) for b in branches]) < nextfloat(one(eltype(dom)),-200) && warn("Warning: possibly missing branches")
+    length(dom) == 1 && arclength(dom)/sum([arclength(b.domain) for b in branches]) < nextfloat(one(eltype(dom)),-200) && warn("Warning: possibly missing branches")
     new{D,R,B}(dom,ran,branches)
   end
 end
@@ -284,15 +284,15 @@ MarkovMap{ff}(dom::Domain,f::Vector{ff},args...) = MarkovMap(dom,dom,f,args...)
 branches(m) = m.branches
 nbranches(m::MarkovMap) = length(m.branches)
 nneutral(m::MarkovMap) = sum([isa(b,NeutralBranch) for b in m.branches])
-getbranch(m::MarkovMap,x::Number) = in(x,domain(m)) ? findfirst([in(x,domain(b)) for b in m.branches]) : throw(DomainError)
+getbranch(m::MarkovMap,x) = in(x,domain(m)) ? findfirst([in(x,domain(b)) for b in m.branches]) : throw(DomainError)
 
 @compat (m::MarkovMap)(i::Integer,x) = (m.branches[i])(x)
-@compat (m::MarkovMap)(x::Number) = (m.branches[getbranch(m,x)])(x)
+@compat (m::MarkovMap)(x) = (m.branches[getbranch(m,x)])(x)
 for FUN in (:mapD,:mapP)
- @eval $FUN(m::MarkovMap,x::Number) = $FUN(m.branches[getbranch(m,x)],x)
+ @eval $FUN(m::MarkovMap,x) = $FUN(m.branches[getbranch(m,x)],x)
 end
 for FUN in (:mapD,:mapP,:mapinv,:mapinvD,:mapinvP)
-  @eval $FUN(m::MarkovMap,i::Integer,x::Number) = $FUN(m.branches[i],x)
+  @eval $FUN(m::MarkovMap,i::Integer,x) = $FUN(m.branches[i],x)
 end
 #mapDsign(m::MarkovMap,i::Integer) = m.sgns[i]
 
@@ -305,7 +305,7 @@ end
 
 # Inducing
 
-function mapinduceP(b::MarkovBranch,x::Number) #hack
+function mapinduceP(b::MarkovBranch,x) #hack
   y = copy(x)
   dy = one(y)
   while in(y,b.domain)
@@ -372,7 +372,7 @@ function extenddata!(m::MarkovInverseCache,n::Int)
 end
 
 for FN in (:mapinv,:mapinvD)
-  @eval $FN(m::MarkovInverseCache,i::Integer,x::Number) = $FN(m.m,i,x)
+  @eval $FN(m::MarkovInverseCache,i::Integer,x) = $FN(m.m,i,x)
 end
 
 function mapinv(m::MarkovInverseCache,i::Integer,x::InterpolationNode)

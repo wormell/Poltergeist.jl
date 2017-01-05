@@ -18,6 +18,25 @@ uniform(S::Space) = Fun(1.,S)/sum(Fun(1.,S))
 uniform(D::Domain) = Fun(1.,D)/sum(Fun(1.,D))
 function SchurInv(L::Operator,u::Fun=uniform(domainspace(L)))
   @assert domain(L) == rangedomain(L)
-  SchurInvWrapper(qrfact(I-L + cache(u/sum(u) * DefiniteIntegral(domainspace(L)))),u)
+  if isa(domainspace(L),ApproxFun.ProductDomain) #TODO: put this into ApproxFun
+    di = DefiniteIntegral(domainspace(L).spaces[1])⊗DefiniteIntegral(domainspace(L).spaces[2])
+    for i = 3:length(domainspace(L).spaces)
+      di = di⊗DefiniteIntegral(domainspace(L).spaces[2])
+    end
+  else
+    di = DefiniteIntegral(domainspace(L))
+  end
+
+
+  SchurInvWrapper(qrfact(I-L + cache(u/sum(u) * di)),u)
 end
 SchurInv(M::MarkovMap,u::Fun=uniform(Space(domain(M)))) = SchurInv(Transfer(M,space(u)),u)
+
+
+# function DefiniteIntegral(sp::ProductSpace) # likely a hack
+#   di = DefiniteIntegral(sp.spaces[1])
+#   for i = 2:length(sp.spaces)
+#     di = di⊗DefiniteIntegral(sp.spaces[i])
+#   end
+#   di
+# end
