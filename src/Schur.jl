@@ -11,14 +11,14 @@ ApproxFun.qrfact(op::SchurInvWrapper) = op
 #SchurInvWrapper(op::Operator) = SchurInvWrapper(op,uniform(domainspace(op)))
 ApproxFun.@wrapper SchurInvWrapper
 
-#ApproxFun.linsolve{S,T,DD,dim}(A::SchurInvWrapper,b::Fun{MatrixSpace{S,T,DD,dim}};kwds...) = linsolve(L.op,b;kwds...) # avoid method ambiguity
-ApproxFun.linsolve(L::SchurInvWrapper,b;kwds...) = linsolve(L.op,b;kwds...)
+#ApproxFun.\{S,T,DD,dim}(A::SchurInvWrapper,b::Fun{MatrixSpace{S,T,DD,dim}};kwds...) = \(L.op,b;kwds...) # avoid method ambiguity
+(\)(L::SchurInvWrapper,b::ApproxFun.Fun;kwds...) = \(L.op,b;kwds...)
 
 uniform(S::Space) = Fun(1.,S)/sum(Fun(1.,S))
 uniform(D::Domain) = Fun(1.,D)/sum(Fun(1.,D))
 function SchurInv(L::Operator,u::Fun=uniform(domainspace(L)))
   @assert domain(L) == rangedomain(L)
-  if isa(domainspace(L),ApproxFun.ProductDomain) #TODO: put this into ApproxFun
+  if isa(domainspace(L),ApproxFun.TensorSpace) #TODO: put this into ApproxFun
     di = DefiniteIntegral(domainspace(L).spaces[1])⊗DefiniteIntegral(domainspace(L).spaces[2])
     for i = 3:length(domainspace(L).spaces)
       di = di⊗DefiniteIntegral(domainspace(L).spaces[2])

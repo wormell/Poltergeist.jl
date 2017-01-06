@@ -25,11 +25,11 @@ FwdExpandingBranch{D<:Domain,R<:Domain,ff,gg}(f::ff,dfdx::gg,dom::D,ran::R) =
 unsafe_call(b::FwdExpandingBranch,x) = b.f(x)
 unsafe_mapD(b::FwdExpandingBranch,x) = b.dfdx(x)
 unsafe_mapP(b::FwdExpandingBranch,x) = (unsafe_call(b,x),unsafe_mapD(b,x))
-mapinv(b::FwdExpandingBranch,x) = interval_newton(b.f,b.dfdx,x,b.domain,interval_guess(x,b.domain,b.rangedomain))
-mapinvD(b::FwdExpandingBranch,x) = 1/b.dfdx(mapinv(b,x))
+mapinv(b::FwdExpandingBranch,x) = domain_newton(b.f,b.dfdx,x,b.domain,domain_guess(x,b.domain,b.rangedomain))
+mapinvD(b::FwdExpandingBranch,x) = inv(b.dfdx(mapinv(b,x)))
 function mapinvP(b::FwdExpandingBranch,x)
   vx = mapinv(b,x)
-  (vx,1/unsafe_mapD(b,vx))
+  (vx,inv(unsafe_mapD(b,vx)))
 end
 
 
@@ -48,11 +48,11 @@ end
 RevExpandingBranch{ff,gg,D<:Domain,R<:Domain}(v::ff,dvdx::gg,dom::D,ran::R) =
   RevExpandingBranch{typeof(v),typeof(dvdx),typeof(dom),typeof(ran)}(v,dvdx,dom,ran)
 
-unsafe_call(b::RevExpandingBranch,x) = interval_newton(b.v,b.dvdx,x,b.rangedomain,interval_guess(x,b.rangedomain,b.domain))
-unsafe_mapD(b::RevExpandingBranch,x) =  1/b.dvdx(unsafe_call(b,x))
+unsafe_call(b::RevExpandingBranch,x) = domain_newton(b.v,b.dvdx,x,b.rangedomain,domain_guess(x,b.rangedomain,b.domain))
+unsafe_mapD(b::RevExpandingBranch,x) =  inv(b.dvdx(unsafe_call(b,x)))
 function unsafe_mapP(b::RevExpandingBranch,x)
   fx = unsafe_call(b,x)
-  (fx,1/mapinvD(b,fx))
+  (fx,inv(mapinvD(b,fx)))
 end
 mapinv(b::RevExpandingBranch,x) = b.v(x)
 mapinvD(b::RevExpandingBranch,x) = b.dvdx(x)
@@ -113,7 +113,7 @@ end
 mapinvD(b::NeutralBranch,x) = mapD(b,mapinvD(b,x))
 function mapinvP(b::NeutralBranch,x)
   vx = mapinv(b,x)
-  (vx,1/unsafe_mapD(b,vx))
+  (vx,inv(unsafe_mapD(b,vx)))
 end
 
 
@@ -383,5 +383,5 @@ end
 # mapinvD{M<:InverseDerivativeMarkovMap}(m::MarkovInverseCache{M},i::Integer,x::InterpolationNode) =
 #   mapinvD(m.m,i,x)
 mapinvD(m::MarkovInverseCache,i::Integer,x::InterpolationNode) =
-  isa(m.branches[i],RevExpandingBranch) ? mapinvD(m.m,i,mapinv(m,i,x)) : 1/mapD(m.m,i,mapinv(m,i,x))
+  isa(m.branches[i],RevExpandingBranch) ? mapinvD(m.m,i,mapinv(m,i,x)) : inv(mapD(m.m,i,mapinv(m,i,x)))
 # mapDsign(m::MarkovInverseCache,i::Integer) = mapDsign(m.m,i)

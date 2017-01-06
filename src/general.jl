@@ -10,6 +10,8 @@ end
 
 typealias PureLaurent{D<:Domain} Hardy{false,D}
 
+typealias GeneralInterval Union{Segment,PeriodicInterval}
+
 #ApproxFun.qrfact(A::ApproxFun.QROperator) = A
 # rem()
 
@@ -39,6 +41,25 @@ Base.zero(p::InterpolationNode) = zero(eltype(p))
 
 # Newton's method
 
+domain_newton{U}(f,df,y::U,D::Domain,x::U=convert(U,rand(D)),tol=100eps(eltype(U))) = basic_newton(f,df,y,x,tol)
+domain_guess(x,dom::Domain,ran::Domain) = rand(ran)
+
+domain_guess{N}(x::Vec{N},dom::ProductDomain,ran::ProductDomain) = Vec{N}([interval_guess(x[i],dom.domains[i],ran.domains[i]) for i =1:N])
+
+function basic_newton{U}(f,df,y::U,x::U,tol=10eps(U))
+  z = x
+  rem = f(z)-y
+  for i = 1:2log2(-200log(eps(eltype(y))))
+    #    while abs(rem) > 30eps(maximum(∂(D)))
+    z -= df(z) \ rem
+    rem = f(z)-y
+    norm(rem) < tol && break
+  end
+
+  norm(rem) > tol && error("Newton: failure to converge")
+  z
+end
+
 function interval_newton{T,U<:Real}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*rand(typeof(y))),tol=10eps(max(abs(da),abs(db))))
   rem = f(x)-y
   for i = 1:2log2(-200log(eps(typeof(y))))
@@ -53,8 +74,6 @@ function interval_newton{T,U<:Real}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*rand(
   abs(rem) > tol && error("Newton: failure to converge")
   x
 end
-interval_newton{U<:Union{Real,Complex}}(f,df,y::U,D::Domain,x::U=(da+(db-da)*rand(typeof(y))),tol=10eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,x,tol)
-interval_guess(y::Number,dom::Domain,ran::Domain) = (dom.a*ran.b-ran.a*dom.b+y*(dom.b-dom.a))/(ran.b-ran.a)
 
 function interval_newton{T,U<:Complex}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*rand(typeof(y))),tol=10eps(max(abs(da),abs(db))))
   rem = f(x)-y
@@ -68,6 +87,10 @@ function interval_newton{T,U<:Complex}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*ra
   abs(rem) > tol && error("Newton: failure to converge")
   x
 end
+domain_newton{U<:Union{Real,Complex}}(f,df,y::U,D::GeneralInterval,x::U=(D.a+(D.b-D.a)*rand(typeof(y))),tol=10eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,x,tol)
+
+interval_guess(y::Number,dom::Domain,ran::Domain) = (dom.a*ran.b-ran.a*dom.b+y*(dom.b-dom.a))/(ran.b-ran.a)
+domain_guess(y::Number,dom::GeneralInterval,ran::GeneralInterval) = interval_guess(y,dom,ran)
 
 function disc_newton{T,U}(f,df,y::U,rad::T,x::U=y,tol=10eps(rad))
 #   x = convert(typeof(y),rad*rand(typeof(real(y))))
@@ -124,7 +147,7 @@ getbasisfun{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K},T) = chebyTk(x,domain(s
 getbasisfun_int{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K},T) = chebyTk_int(x,domain(sk.s),sk.k)
 
 function getbasisfun{F<:TensorSpace,K<:Integer}(x,sk::BasisFun{F,K},T)
-  ks = ApproxFun.CachedIterator(ApproxFun.tensorizer(sk.s))[sk.k]
+  ks = ApproxFun.tensorizer(sk.s)[sk.k]
   prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i]),T) for i = eachindex(sk.s.spaces))
 end
 # no getbasisfun_int as you don't have antiderivatives
