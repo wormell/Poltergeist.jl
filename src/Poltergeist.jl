@@ -1,8 +1,8 @@
 module Poltergeist
-  using Base, ApproxFun, BandedMatrices, Compat, DualNumbers#, PyPlot#, FastTransforms
+  using Base, ApproxFun, BandedMatrices, Compat, DualNumbers, FixedSizeArrays#, PyPlot#, FastTransforms
 
 import Base: values,getindex,setindex!,*,.*,+,.+,-,.-,==,<,<=,>,|,
->=,./,/,.^,^,\,∪,transpose, size, length,  eltype#issymmetric,
+>=,./,/,.^,^,\,∪,transpose, size, length,  eltype, inv#issymmetric,
 import ApproxFun: domainspace, rangespace, domain, israggedbelow, RaggedMatrix, resizedata!, colstop, CachedOperator, Infinity,
 fromcanonicalD, tocanonicalD, default_raggedmatrix, fromcanonical, tocanonical, space
 
