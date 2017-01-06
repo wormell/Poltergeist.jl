@@ -148,6 +148,6 @@ getbasisfun_int{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K},T) = chebyTk_int(x,
 
 function getbasisfun{F<:TensorSpace,K<:Integer}(x,sk::BasisFun{F,K},T)
   ks = ApproxFun.tensorizer(sk.s)[sk.k]
-  prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i]),T) for i = eachindex(sk.s.spaces))
+  @compat prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i]),T) for i = eachindex(sk.s.spaces))
 end
 # no getbasisfun_int as you don't have antiderivatives
