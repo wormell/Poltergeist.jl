@@ -36,5 +36,5 @@ function timehist_init{T}(m::AbstractMarkovMap,n::Integer,nbins::Integer,xinit::
 
   bin_start:bin_step:domain(m).b,x_hist
 end
-timehist(m::AbstractMarkovMap,n::Integer,nbins::Integer;x0=map(m,rand(domain(m)),10^4)) = timehist_init(m,n,nbins,x0)
+timehist(m::AbstractMarkovMap,n::Integer,nbins::Integer;x0=map_n(m,rand(domain(m)),10^4)) = timehist_init(m,n,nbins,x0)
 timehist(m::AbstractMarkovMap,n::Integer,nbins::Integer,rho::Fun) = timehist_init(m,n,nbins,sample(rho))

@@ -15,23 +15,32 @@ immutable ConcreteTransfer{T,D<:Space,R<:Space,M<:AbstractMarkovMap} <: Abstract
   rangespace::R
   colstops::Array{Int,1}
   #    f::Array{Vector{T},1}
-  function ConcreteTransfer(m::AbstractMarkovMap,domainspace::Space,rangespace::Space)
-    @assert domain(m)==domain(domainspace)
-    @assert rangedomain(m)==domain(rangespace)
-    nneutral(m) != 0 && error("Neutral fixed points not supported for transfer operator")
-    new{eltype(eltype(m)),typeof(domainspace),typeof(rangespace),typeof(m)}(m,domainspace,rangespace,eltype(M)[])
-  end
+  # function ConcreteTransfer{T,D<:Space,R<:Space,M<:AbstractMarkovMap}(m::AbstractMarkovMap,domainspace::Space,rangespace::Space,colstops::Array{Int,1}=Int[])
+  #   @assert domain(m)==domain(domainspace)
+  #   @assert rangedomain(m)==domain(rangespace)
+  #   nneutral(m) != 0 && error("Neutral fixed points not supported for transfer operator")
+  #   new{T,typeof(domainspace),typeof(rangespace),typeof(m)}(m,domainspace,rangespace,colstops)
+  # end
 end
 Transfer(stuff...;padding=false) = cache(ConcreteTransfer(stuff...),padding=padding)
 
 ConcreteTransfer{T}(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
-                    ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) =
-  ConcreteTransfer{T,typeof(dom),typeof(ran),typeof(m)}(m,dom,ran)#,domainspace(m),rangespace(m))
-ConcreteTransfer(m,dom::Space=Space(domain(m)),ran=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m)))) = ConcreteTransfer(eltype(m),m,dom,ran)
+                    ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m))),colstops::Array{Int,1}=Int[]) =
+  ConcreteTransfer{T,typeof(dom),typeof(ran),typeof(m)}(m,dom,ran,colstops)#,domainspace(m),rangespace(m))
+ConcreteTransfer(m,dom::Space=Space(domain(m)),ran=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m))),colstops::Array{Int,1}=Int[]) = ConcreteTransfer(eltype(m),m,dom,ran)
 
 for OP in (:domainspace,:rangespace)
   @eval ApproxFun.$OP(L::ConcreteTransfer) = L.$OP
 end
+
+function Base.convert{T}(::Type{Operator{T}},D::ConcreteTransfer)
+    if T==eltype(D)
+        D
+    else
+        ConcreteTransfer{T,typeof(D.domainspace),typeof(D.rangespace),typeof(D.m)}(D.m,D.domainspace,D.rangespace,D.colstops)
+    end
+end
+
 
 getmap(L::ConcreteTransfer) = L.m
 
@@ -131,7 +140,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
     tol =T==Any?200eps():200eps(T)
 
     if L.colstops[kk] >= 1
-      coeffs = ApproxFun.transform(rs,transferfunction_nodes(getmap(L),2^max(4,nextpow2(L.colstops[kk])),kk,T))
+      coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^max(4,nextpow2(L.colstops[kk])),kk,T))
       maxabsc = max(maxabs(coeffs),one(T))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs))/10)
     elseif L.colstops[kk]  == 0

@@ -116,7 +116,7 @@ end
 type FunctionDerivative{ff<:Function}
   f::ff
 end
-@compat (fd::FunctionDerivative)(x::Number) = oftype(x,dualpart(fd.f(Dual(x,one(x)))))
+@compat (fd::FunctionDerivative)(x) = oftype(x,dualpart(fd.f(Dual(x,one(x)))))
 
 type BasisFun{S<:Space,II<:Integer}
   s::S
