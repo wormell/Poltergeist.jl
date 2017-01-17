@@ -145,7 +145,7 @@ function branch{ff,gg,T<:Number,R<:Domain}(fs::Vector{ff},dfdxs::Vector{gg},b::V
   branch(fs,dfdxs,ApproxFun.Segment{T}[Segment(b[i],b[i+1]) for i = 1:length(b)-1],ran,dir)
 end
 
-function autodiff_dual(f,bi::Number)
+function autodiff_dual(f,bi)
   fd = FunctionDerivative(f)
   try
     fd(bi)
@@ -155,6 +155,7 @@ function autodiff_dual(f,bi::Number)
   end
   fd
 end
+#TODO: fix this shitty overload:
 autodiff_dual(f,bi::Domain) = autodiff_dual(f,rand(bi))
 
 function branch{ff,T<:Union{Number,Domain}}(fs::Vector{ff},b::Vector{T},args...)
@@ -163,11 +164,11 @@ function branch{ff,T<:Union{Number,Domain}}(fs::Vector{ff},b::Vector{T},args...)
 #   end
   branch(fs,[autodiff_dual(fs[i],b[i]) for i in eachindex(fs)],b,args...)
 end
-branch{T<:Union{Number,Domain}}(f,b::T,args...) = branch(f,autodiff_dual(f,b),b,args...)
+branch{T}(f,b::T,args...) = branch(f,autodiff_dual(f,b),b,args...)
 
-branch{ff<:Fun,T<:Union{Number,Domain}}(fs::Vector{ff},b::Vector{T},args...) =
+branch{ff<:Fun,T}(fs::Vector{ff},b::Vector{T},args...) =
   branch(fs,[f' for f in fs],b,args...)
-branch{T<:Union{Number,Domain}}(f::Fun,b::T,args...) = branch(f,f',b,args...)
+branch{T}(f::Fun,b::T,args...) = branch(f,f',b,args...)
 
 
 
