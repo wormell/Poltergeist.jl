@@ -77,7 +77,7 @@ function transferbranch(x,b::MarkovBranch,f,T)
   (v,dvdx) = mapinvP(b,x)
   abs(det(dvdx)).*f(v)
 end
-function transferbranch_int(x,b::MarkovBranch,f,T)
+function transferbranch_int(x,y,b::MarkovBranch,f,T)
   csf = cumsum(f)
   (v,dvdx) = mapinvP(b,x)
   vy = mapinv(b,y); vx = mapinv(b,x)
@@ -117,8 +117,8 @@ transfer(m::MarkovMap,fn,x) = transferfunction(x,m,fn,eltype(m))
 
 transferfunction_nodes{TT,D,R,M<:AbstractMarkovMap}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
   T[transferfunction(p,getmap(L),BasisFun(domainspace(L),kk),T) for p in points(rangespace(L),n)]
-transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
-  T[transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),getmap(L),BasisFun(domainspace(L),kk),T) for k = 1:n]
+# transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
+#   T[transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),getmap(L),BasisFun(domainspace(L),kk),T) for k = 1:n]
 
 
 function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range,padding::Bool=false)
