@@ -11,7 +11,7 @@ include("AbelFunction.jl")
 include("MarkovMap.jl")
 include("Transfer.jl")
 include("InducedTransfer.jl")
-include("Schur.jl")
+include("Solution.jl")
 include("TimeSeries.jl")
 include("poetry.jl")
 

@@ -1,7 +1,7 @@
 export acim, linearresponse, correlationsum, birkhoff_cov, birkhoff_var
 
-acim(S::SchurInvWrapper) = S.op\S.u
-acim(L::Operator,u::Fun=uniform(domainspace(L))) = SchurInv(L,u)\u
+acim(S::SolutionInvWrapper) = S.op\S.u
+acim(L::Operator,u::Fun=uniform(domainspace(L))) = SolutionInv(L,u)\u
 acim(M::AbstractMarkovMap) = acim(Transfer(M))
 
 function normalise_for_correlation(f::Fun,r::Fun=uniform(space(f)))
@@ -9,22 +9,22 @@ function normalise_for_correlation(f::Fun,r::Fun=uniform(space(f)))
   rf -= r*sum(rf)/sum(r)
 end
 
-linearresponse(S::SchurInvWrapper,X::Fun) = S\(-acim(S)*X)'
-function correlationsum(S::SchurInvWrapper,A::Fun)
+linearresponse(S::SolutionInvWrapper,X::Fun) = S\(-acim(S)*X)'
+function correlationsum(S::SolutionInvWrapper,A::Fun)
   r = acim(S)
   S \ normalise_for_correlation(A,r)
 end
 
-birkhoff_cov(S::SchurInvWrapper,A::Fun,B::Fun) =
+birkhoff_cov(S::SolutionInvWrapper,A::Fun,B::Fun) =
   sum(B*correlationsum(S,A)) + sum(A*correlationsum(S,B)) - sum(B*normalise_for_correlation(A,acim(S)))
-birkhoff_var(S::SchurInvWrapper,A::Fun) =
+birkhoff_var(S::SolutionInvWrapper,A::Fun) =
   2sum(A*correlationsum(S,A)) - sum(A*normalise_for_correlation(A,acim(S)))
 
 for OP in (:linearresponse,:correlationsum,:birkhoff_var)
-  @eval $OP(L::Operator,X::Fun) = $OP(SchurInv(L),X)
+  @eval $OP(L::Operator,X::Fun) = $OP(SolutionInv(L),X)
   @eval $OP(M::AbstractMarkovMap,X::Fun) = $OP(Transfer(M),X)
 end
-birkhoff_cov(L::Operator,X::Fun,Y::Fun) = birkhoff_cov(SchurInv(L),X,Y)
+birkhoff_cov(L::Operator,X::Fun,Y::Fun) = birkhoff_cov(SolutionInv(L),X,Y)
 birkhoff_cov(M::AbstractMarkovMap,X::Fun,Y::Fun) = birkhoff_cov(Transfer(M),X,Y)
 
 
