@@ -14,8 +14,16 @@ ApproxFun.@wrapper SchurInvWrapper
 #ApproxFun.\{S,T,DD,dim}(A::SchurInvWrapper,b::Fun{MatrixSpace{S,T,DD,dim}};kwds...) = \(L.op,b;kwds...) # avoid method ambiguity
 (\)(L::SchurInvWrapper,b::ApproxFun.Fun;kwds...) = \(L.op,b;kwds...)
 
-uniform(S::Space) = Fun(1.,S)/sum(Fun(1.,S))
-uniform(D::Domain) = Fun(1.,D)/sum(Fun(1.,D))
+function uniform(S::Space)
+  u = Fun(one,S)
+  Tu = sum(u)
+  for i = 1:ncoefficients(u)
+    u.coefficients[i] /= Tu
+  end
+  u
+end
+uniform(D::Domain) = uniform(Space(D))
+
 function SchurInv(L::Operator,u::Fun=uniform(domainspace(L)))
   @assert domain(L) == rangedomain(L)
   if isa(domainspace(L),ApproxFun.TensorSpace) #TODO: put this into ApproxFun
