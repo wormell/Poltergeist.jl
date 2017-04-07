@@ -50,7 +50,7 @@ end
 Base.ctranspose(bi::MarkovBranchInverse) = MarkovBranchDerivativeInverse(bi.b)
 # Base.transpose(b::MarkovBranch) = MarkovBranchDerivative(b)
 
-immutable MarkovMapDerivative{M<:MarkovMap}
+immutable MarkovMapDerivative{M<:AbstractMarkovMap}
   m::M
 end
 @compat (md::MarkovMapDerivative)(x::Number) = mapD(md.m,x)

@@ -6,7 +6,7 @@ abstract MarkovBranch{D<:Domain,R<:Domain}
 
 Base.summary(b::MarkovBranch) =  string(typeof(b).name.name)*":"*string(domain(b))*"↦"*string(rangedomain(b)) #branches??
 Base.eltype(b::MarkovBranch) = eltype(rangedomain(b))
-Base.show(io::IO,b::MarkovBranch) = print(io,typeof(b)) #temporary
+# Base.show(io::IO,b::MarkovBranch) = print(io,typeof(b)) #temporary
 
 immutable FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
   f::ff
@@ -250,7 +250,7 @@ function MarkovMap(fs::AbstractVector,gs::AbstractVector,ds::AbstractVector,ran;
 end
 
 
-type InducedMarkovMap{M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
+immutable InducedMarkovMap{M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
   m::M
   b::B
   domain::D
