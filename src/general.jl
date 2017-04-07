@@ -39,6 +39,10 @@ Base.eltype(p::InterpolationNode) = eltype(p.sp)
 
 Base.zero(p::InterpolationNode) = zero(eltype(p))
 
+# Circle domains
+
+mod(x,p::PeriodicInterval) = mod(x-p.a,p.b-p.a)+p.a
+
 # Newton's method
 
 domain_newton{U}(f,df,y::U,D::Domain,x::U=convert(U,rand(D)),tol=100eps(eltype(U))) = basic_newton(f,df,y,x,tol)

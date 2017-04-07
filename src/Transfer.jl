@@ -107,7 +107,7 @@ function transferfunction_int(x,y,m::MarkovMap,sk,T)
 end
 
 # Transfer a fun - to improve upon
-function transfer(m::MarkovMap,fn)
+function transfer(m::AbstractMarkovMap,fn)
   @inline tf(x) = transferfunction(x,m,fn,eltype(eltype(m)))
   Fun(tf,rangespace(m)) # TODO: MarkovMaps don't have spaces
 end
