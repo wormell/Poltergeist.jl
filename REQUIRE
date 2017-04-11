@@ -1,6 +1,7 @@
 julia 0.4
-ApproxFun 0.4.1
+ApproxFun 0.6.0
 BandedMatrices 0.1.2
-Compat 0.9.4
-ForwardDiff 0.2.5
-PyPlot 2.2.4
+Compat 0.22.0
+DualNumbers 0.3.0
+FixedSizeArrays 0.2.5
+IntervalSets 0.0.5
