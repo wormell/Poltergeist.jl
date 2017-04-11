@@ -41,16 +41,17 @@ Base.zero(p::InterpolationNode) = zero(eltype(p))
 
 # Circle domains
 
-mod(x,p::PeriodicInterval) = mod(x-p.a,p.b-p.a)+p.a
+interval_mod(x,a,b) = (b-a)*mod((x-a)/(b-a),1)+a
+mod(x,p::PeriodicInterval) = interval_mod(x,p.a,p.b)
 
 # Newton's method
 
-domain_newton{U}(f,df,y::U,D::Domain,x::U=convert(U,rand(D)),tol=100eps(eltype(U))) = basic_newton(f,df,y,x,tol)
+domain_newton{U}(f,df,y::U,D::Domain,x::U=convert(U,rand(D)),tol=400eps(eltype(U))) = basic_newton(f,df,y,x,tol)
 domain_guess(x,dom::Domain,ran::Domain) = rand(ran)
 
 domain_guess{N}(x::Vec{N},dom::ProductDomain,ran::ProductDomain) = Vec{N}([interval_guess(x[i],dom.domains[i],ran.domains[i]) for i =1:N])
 
-function basic_newton{U}(f,df,y::U,x::U,tol=10eps(U))
+function basic_newton{U}(f,df,y::U,x::U,tol=40eps(U))
   z = x
   rem = f(z)-y
   for i = 1:2log2(-200log(eps(eltype(y))))
@@ -60,26 +61,55 @@ function basic_newton{U}(f,df,y::U,x::U,tol=10eps(U))
     norm(rem) < tol && break
   end
 
-  norm(rem) > tol && error("Newton: failure to converge")
+  norm(rem) > tol && error("Newton: failure to converge: y = $y, x estimate = $z, rem = $rem")
   z
 end
 
-function interval_newton{T,U<:Real}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*rand(typeof(y))),tol=10eps(max(abs(da),abs(db))))
+# function monotonic_newton{U}(f,df,y::U,xl::U,xh::U,tol=40eps(U)) ## TODO: REALLY WANT UPPER/LOWER GUESSES OR STH
+#   σ = sign(df(x))
+#   det(σ) == 0 && error("f has critical point at $x")
+#   z = xl
+#   σzl = σ*xl; σzu = σ*xh; # actually find x,u
+#   rem = f(z)-y
+#   σz = σ*z
+#   rem < 0 ? (σzu = min(σzu,σz)) : (σzl = max(σzl,σz))
+#   println((z,y,rem,σz,σzl,σzu))
+#   for i = 1:200#log2(-200log(eps(eltype(y))))
+#     #    while abs(rem) > 30eps(maximum(∂(D)))
+#     z -= df(z) \ rem
+#     rem = f(z)-y
+#     norm(rem) < tol && break
+#
+#     println((z,y,rem,σz,σzl,σzu))
+#
+#     σz = σ*z
+#     rem < 0 ? (σzu = min(σzu,σz)) : (σzl = max(σzl,σz))
+#     σzu < σzl && (σzu += 4tol, σzl -= 4tol)
+#     (σz > σzu || σz < σzl) && (z = σ*(σzl + (σzu-σzl)*rand()))
+#     println((z,y,rem,σz,σzl,σzu))
+#   end
+#
+#   norm(rem) > tol && error("Newton: failure to converge")
+#   z
+# end
+
+function interval_newton{T,U<:Real}(f,df,y::U,da::T,db::T,x::U=(da+db)/2,tol=40eps(max(abs(da),abs(db))))
   rem = f(x)-y
   for i = 1:2log2(-200log(eps(typeof(y))))
     #    while abs(rem) > 30eps(maximum(∂(D)))
-    x -= rem / df(x)
+    x -= rem / df(x) + eps(x)*(mod(i,11)-5)/4
     x .> db && (x = db)
     x .< da && (x = da)
     rem = f(x)-y
+    #  println((x,f(x)-y))
     abs(rem) < tol && break
   end
 
-  abs(rem) > tol && error("Newton: failure to converge")
+  abs(rem) > tol && error("Newton: failure to converge: y = $y, x estimate = $x, rem = $rem")
   x
 end
 
-function interval_newton{T,U<:Complex}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*rand(typeof(y))),tol=10eps(max(abs(da),abs(db))))
+function interval_newton{T,U<:Complex}(f,df,y::U,da::T,db::T,x::U=(da+db)/2,tol=40eps(max(abs(da),abs(db))))
   rem = f(x)-y
   for i = 1:2log2(-200log(eps(typeof(abs(y)))))
     #    while abs(rem) > 30eps(maximum(∂(D)))
@@ -88,15 +118,15 @@ function interval_newton{T,U<:Complex}(f,df,y::U,da::T,db::T,x::U=(da+(db-da)*ra
     abs(rem) < tol && break
   end
 
-  abs(rem) > tol && error("Newton: failure to converge")
+  abs(rem) > tol && error("Newton: failure to converge: y = $y, x estimate = $x, rem = $rem")
   x
 end
-domain_newton{U<:Union{Real,Complex}}(f,df,y::U,D::GeneralInterval,x::U=(D.a+(D.b-D.a)*rand(typeof(y))),tol=10eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,x,tol)
+domain_newton{U<:Union{Real,Complex}}(f,df,y::U,D::GeneralInterval,x::U=(D.a+D.b)/2,tol=40eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,x,tol)
 
 interval_guess(y::Number,dom::Domain,ran::Domain) = (dom.a*ran.b-ran.a*dom.b+y*(dom.b-dom.a))/(ran.b-ran.a)
 domain_guess(y::Number,dom::GeneralInterval,ran::GeneralInterval) = interval_guess(y,dom,ran)
 
-function disc_newton{T,U}(f,df,y::U,rad::T,x::U=y,tol=10eps(rad))
+function disc_newton{T,U}(f,df,y::U,rad::T,x::U=y,tol=40eps(rad))
 #   x = convert(typeof(y),rad*rand(typeof(real(y))))
   rem = f(x) - y
   for i = 1:2log2(-200log(eps(typeof(real(y)))))
@@ -105,7 +135,7 @@ function disc_newton{T,U}(f,df,y::U,rad::T,x::U=y,tol=10eps(rad))
     abs(rem) < tol && break
     abs(x) > rad && (x /= abs(x))
   end
-  abs(rem) > tol && error("Newton: failure to converge")
+  abs(rem) > tol && error("Newton: failure to converge: y = $y, x estimate = $x, rem = $rem")
   x
 end
 

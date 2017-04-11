@@ -1,192 +1,5 @@
-export MarkovMap, branch, nbranches, induce, NeutralBranch
-
-# MarkovBranch
-
-abstract MarkovBranch{D<:Domain,R<:Domain}
-
-Base.summary(b::MarkovBranch) =  string(typeof(b).name.name)*":"*string(domain(b))*"↦"*string(rangedomain(b)) #branches??
-Base.eltype(b::MarkovBranch) = eltype(rangedomain(b))
-# Base.show(io::IO,b::MarkovBranch) = print(io,typeof(b)) #temporary
-
-immutable FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
-  f::ff
-  dfdx::gg
-  domain::D
-  rangedomain::R
-  #  sgn::T
-  function FwdExpandingBranch(fc,dfdxc,dom,ran)
-    ~isempty(∂(ran)) && @assert all([in(fc(p),∂(ran)) for p in ∂(dom)])
-    new(fc,dfdxc,dom,ran)
-  end
-end
-FwdExpandingBranch{D<:Domain,R<:Domain,ff,gg}(f::ff,dfdx::gg,dom::D,ran::R) =
-  FwdExpandingBranch{typeof(f),typeof(dfdx),typeof(dom),typeof(ran)}(f,dfdx,dom,ran)
-
-unsafe_call(b::FwdExpandingBranch,x) = b.f(x)
-unsafe_mapD(b::FwdExpandingBranch,x) = b.dfdx(x)
-unsafe_mapP(b::FwdExpandingBranch,x) = (unsafe_call(b,x),unsafe_mapD(b,x))
-mapinv(b::FwdExpandingBranch,x) = domain_newton(b.f,b.dfdx,x,b.domain,domain_guess(x,b.domain,b.rangedomain))
-mapinvD(b::FwdExpandingBranch,x) = inv(b.dfdx(mapinv(b,x)))
-function mapinvP(b::FwdExpandingBranch,x)
-  vx = mapinv(b,x)
-  (vx,inv(unsafe_mapD(b,vx)))
-end
-
-
-# RevExpandingBranch
-
-immutable RevExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
-  v::ff
-  dvdx::gg
-  domain::D
-  rangedomain::R
-  #   sgn::T
-  function RevExpandingBranch(vc,dvdxc,dom,ran)
-    new(vc,dvdxc,dom,ran)
-  end
-end
-RevExpandingBranch{ff,gg,D<:Domain,R<:Domain}(v::ff,dvdx::gg,dom::D,ran::R) =
-  RevExpandingBranch{typeof(v),typeof(dvdx),typeof(dom),typeof(ran)}(v,dvdx,dom,ran)
-
-unsafe_call(b::RevExpandingBranch,x) = domain_newton(b.v,b.dvdx,x,b.rangedomain,domain_guess(x,b.rangedomain,b.domain))
-unsafe_mapD(b::RevExpandingBranch,x) =  inv(b.dvdx(unsafe_call(b,x)))
-function unsafe_mapP(b::RevExpandingBranch,x)
-  fx = unsafe_call(b,x)
-  (fx,inv(mapinvD(b,fx)))
-end
-mapinv(b::RevExpandingBranch,x) = b.v(x)
-mapinvD(b::RevExpandingBranch,x) = b.dvdx(x)
-mapinvP(b::RevExpandingBranch,x) = (mapinv(b,x),mapinvD(b,x))
-
-
-
-# NeutralBranch
-
-immutable NeutralBranch{A<:AbelFunction,D,R} <: MarkovBranch{D,R}
-  ab::A
-  domain::D
-  rangedomain::R
-  function NeutralBranch(abel,domain,rangedomain)
-    @assert in(abel.p,∂(domain)∩∂(rangedomain))
-    @assert issubset(domain,rangedomain)
-    @assert domain != rangedomain
-    @assert length(setdiff(∂(domain),∂(rangedomain)))==1
-    @assert (setdiff(∂(domain),∂(rangedomain))[1]-abel.p)*abel.sgn > 0 "Abel function pointing in the wrong direction"
-    @assert arclength(domain)*abel.h(arclength(domain)^abel.alpha) ≈ arclength(rangedomain) "Branch not Markov"
-    new(abel,domain,rangedomain)
-  end
-end
-NeutralBranch{A<:AbelFunction,D<:Domain,R<:Domain}(abel::A,dom::D,ran::R) =
-  NeutralBranch{typeof(abel),typeof(dom),typeof(ran)}(abel,dom,ran)
-
-
-tocanonical(R::AbelFunction,x) = R.sgn*(x-R.p)
-fromcanonical(R::AbelFunction,x) = R.p + R.sgn*x
-for FUN in (:fromcanonical,:tocanonical)
-  @eval $FUN(b::NeutralBranch,x) = $FUN(b.ab,x)
-end
-
-function NeutralBranch{hh,jj}(h::hh,dh::jj,alpha::Number,r0::Number,dom::Domain,ran::Domain)
-  length(∂(dom)∩∂(ran)) != 1 && error("Edges of domain and range not compatible")
-  p = (∂(dom)∩∂(ran))[1]
-  sgn = sign(setdiff(∂(dom),∂(ran))[1]-p)
-  abel = AbelFunction(h,dh,alpha,r0,p,sgn)
-  zeroat!(abel,setdiff(∂(ran),∂(dom))[1])
-  NeutralBranch(abel,dom,ran)
-end
-
-function unsafe_call(b::NeutralBranch,x)
-  xc = tocanonical(b.ab,x)
-  fromcanonical(b.ab,xc.*b.ab.h(xc.^b.ab.alpha))
-end
-function unsafe_mapD(b::NeutralBranch,x)
-  xc = tocanonical(b.ab,x)
-  alpha = b.ab.alpha
-  b.ab.sgn*(b.ab.h(xc.^alpha) + alpha * xc.^alpha .* b.ab.dh(xc.^alpha))
-end
-unsafe_mapP(b::NeutralBranch,x) = (b(x),mapD(b,x))
-
-function mapinv{T}(b::NeutralBranch,x::T)
-  y = ringhconv(b.ab,toring(b.ab,x))::T
-  fromring(b.ab,ringhconv(b.ab,hdisc_newton(b.ab,y)))
-end
-mapinvD(b::NeutralBranch,x) = mapD(b,mapinvD(b,x))
-function mapinvP(b::NeutralBranch,x)
-  vx = mapinv(b,x)
-  (vx,inv(unsafe_mapD(b,vx)))
-end
-
-
-
-# branch constructors
-
-function branch{ff,gg}(f::ff,dfdx::gg,dom,ran;dir::AbstractString="fwd",ftype::Type{ff}=ff,dfdxtype::Type{gg}=gg)
-  domd = Domain(dom); randm  = Domain(ran);
-  dir=="fwd" ? FwdExpandingBranch{ftype,dfdxtype,typeof(domd),typeof(randm)}(f,dfdx,domd,randm) :
-        RevExpandingBranch{ftype,dfdxtype,typeof(domd),typeof(randm)}(f,dfdx,domd,randm)
-end
-
-# function branch{ff,gg,D<:Domain,R<:Domain}(fs::AbstractVector{ff},dfdxs::AbstractVector{gg},doms::AbstractVector{D},ran::R,dir::AbstractString="fwd")
-#   @assert length(fs) == length(dfdxs)
-#   @assert length(doms) == length(fs)
-#   ftype = promote_type([typeof(f) for f in fs]...)
-#   dfdxtype = promote_type([typeof(f) for f in dfdxs]...)
-#   TYP = dir=="fwd" ? FwdExpandingBranch{ftype,dfdxtype,D,R} : #eltype(doms),typeof(ran)
-#   RevExpandingBranch{ftype,dfdxtype,D,R}
-#   TYP[branch(fs[i],dfdxs[i],doms[i],ran,dir,ftype,dfdxtype) for i = 1:length(fs)]
-# end
-# function branch{ff,gg,T<:Number,R<:Domain}(fs::AbstractVector{ff},dfdxs::AbstractVector{gg},bl::AbstractVector{T},bu::AbstractVector{T},ran::R,dir::AbstractString="fwd")
-#   @assert length(bl) == length(fs)
-#   @assert length(bu) == length(fs)
-#   branch(fs,dfdxs,ApproxFun.Segment{T}[Segment(bl[i],bu[i]) for i = 1:length(bl)],ran,dir)
-# end
-#
-# function branch{ff,gg,T<:Number,R<:Domain}(fs::AbstractVector{ff},dfdxs::AbstractVector{gg},b::AbstractVector{T},ran::R,dir::AbstractString="fwd")
-#   @assert length(fs) == (length(b)-1)
-#   @assert issorted(b)
-#   branch(fs,dfdxs,ApproxFun.Segment{T}[Segment(b[i],b[i+1]) for i = 1:length(b)-1],ran,dir)
-# end
-
-function autodiff_dual(f,bi::Number)
-  fd = FunctionDerivative(f)
-  try
-    fd(bi)
-  catch e
-    isa(e,MethodError) && error("To use automatic differentiation, your function must accept DualNumbers")
-    throw(e)
-  end
-  fd
-end
-#TODO: fix this bad overload:
-autodiff_dual(f,bi) = autodiff_dual(f,rand(Domain(bi)))
-
-function branch{ff}(fs::AbstractVector{ff},ds::AbstractVector,args...;kwargs...)
-#   for (i,f) in enumerate(fs)
-#     check_dualmethods(f,b[i])
-#   end
-  branch(fs,[autodiff_dual(fs[i],ds[i]) for i in eachindex(fs)],ds,args...;kwargs...)
-end
-branch(f,d::Union{Domain,IntervalSets.AbstractInterval},args...;kwargs...) = branch(f,autodiff_dual(f,d),d,args...;kwargs...)
-
-# branch{ff<:Fun,T}(fs::AbstractVector{ff},b::AbstractVector{T},args...;kwargs...) =
-#   branch(fs,[f' for f in fs],b,args...;kwargs...)
-branch(f::Fun,d::Union{Domain,IntervalSets.AbstractInterval},args...;kwargs...) = branch(f,f',d,args...;kwargs...)
-
-
-
-
-for TYP in (:FwdExpandingBranch,:RevExpandingBranch,:NeutralBranch)
-  @eval @compat (b::$TYP)(x) = in(x,b.domain) ? unsafe_call(b,x) : throw(DomainError)
-  @eval mapD(b::$TYP,x) = in(x,b.domain) ? unsafe_mapD(b,x) : error("DomainError: $x in $(b.domain)")
-  @eval mapP(b::$TYP,x) = in(x,b.domain) ? unsafe_mapP(b,x) : throw(DomainError)
-  @eval domain(b::$TYP) = b.domain
-  @eval rangedomain(b::$TYP) = b.rangedomain
-end
-
-
-
-
 # MarkovMaps
+export MarkovMap, branch, nbranches, induce, CircleMap
 
 abstract AbstractMarkovMap{D<:Domain,R<:Domain}# <: Function
 #abstract AbstractDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: AbstractMarkovMap{D,R,T,FF}
@@ -249,29 +62,19 @@ function MarkovMap(fs::AbstractVector,gs::AbstractVector,ds::AbstractVector,ran;
         Segment(minimum(first(d) for d in dsm),maximum(last(d) for d in dsm)),Domain(ran))
 end
 
-
-immutable InducedMarkovMap{M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
-  m::M
-  b::B
-  domain::D
-  rangedomain::R
-  function InducedMarkovMap(m,b,dom,ran) #requires m,b: their domains -> m ∪ b
-    @assert dom == ran
-    @assert domain(m) == dom
-    @assert rangedomain(b) == rangedomain(m)
-    @assert domain(m) == setdiff(rangedomain(m),domain(b))
-    new(m,b,dom,ran)
-  end
+@compat (m::MarkovMap)(i::Integer,x) = (m.branches[i])(x)
+@compat (m::MarkovMap)(x) = (m.branches[getbranch(m,x)])(x)
+for FUN in (:mapD,:mapP)
+ @eval $FUN(m::MarkovMap,x) = $FUN(m.branches[getbranch(m,x)],x)
 end
-InducedMarkovMap(m::MarkovMap,b::MarkovBranch,dom::Domain,ran::Domain) =
-  InducedMarkovMap{typeof(m),typeof(b),typeof(dom),typeof(ran)}(m,b,dom,ran)
-
-
-for TYP in (:MarkovMap,:InducedMarkovMap)
-  @eval ApproxFun.domain(m::$TYP) = m.domain
-  @eval rangedomain(m::$TYP) = m.rangedomain
+for FUN in (:mapD,:mapP,:mapinv,:mapinvD,:mapinvP)
+  @eval $FUN(m::MarkovMap,i::Integer,x) = $FUN(m.branches[i],x)
 end
 
+branches(m) = m.branches
+nbranches(m::MarkovMap) = length(m.branches)
+nneutral(m::MarkovMap) = sum([isa(b,NeutralBranch) for b in m.branches])
+getbranch(m::MarkovMap,x) = in(x,m.domain) ? findfirst([in(x,domain(b)) for b in m.branches]) : throw(DomainError)
 
 # # TODO: maybe roll into branch constructors? maybe remove??
 # function MarkovMap{D,R,ff}(
@@ -304,19 +107,108 @@ end
 # # end
 # MarkovMap{ff}(f::AbstractVector{ff},dom::Domain,args...;kwargs...) = MarkovMap(f,dom,dom,args...;kwargs...)
 
-branches(m) = m.branches
-nbranches(m::MarkovMap) = length(m.branches)
-nneutral(m::MarkovMap) = sum([isa(b,NeutralBranch) for b in m.branches])
-getbranch(m::MarkovMap,x) = in(x,domain(m)) ? findfirst([in(x,domain(b)) for b in m.branches]) : throw(DomainError)
 
-@compat (m::MarkovMap)(i::Integer,x) = (m.branches[i])(x)
-@compat (m::MarkovMap)(x) = (m.branches[getbranch(m,x)])(x)
-for FUN in (:mapD,:mapP)
- @eval $FUN(m::MarkovMap,x) = $FUN(m.branches[getbranch(m,x)],x)
+# CircleMaps
+
+abstract AbstractCircleMap{D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
+
+immutable FwdCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
+  f::ff
+  dfdx::gg
+  domain::D
+  rangedomain::R
+  cover::Int
+  fa::T
+  fb::T
+
+  function FwdCircleMap(f,dfdx,domd,randm)
+    # @assert isempty(∂(randm)) isempty(∂(domd))
+    fa = f(first(domd)); fb = f(last(domd))
+    cover_est = (fb-fa)/arclength(randm)
+    cover_integer = round(Int,cover_est)
+    cover_est ≈ cover_integer || error("Circle map lift does not have integer covering number.")
+    new(f,dfdx,domd,randm,abs(cover_integer),fa,fb)
+  end
 end
-for FUN in (:mapD,:mapP,:mapinv,:mapinvD,:mapinvP)
-  @eval $FUN(m::MarkovMap,i::Integer,x) = $FUN(m.branches[i],x)
+function FwdCircleMap{ff,gg}(f::ff,dfdx::gg,dom,ran)
+  domd = PeriodicDomain(dom); randm = PeriodicDomain(ran)
+  FwdCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(domd)}(f,dfdx,domd,randm)
 end
+
+@compat (m::FwdCircleMap)(x) = mod(m.f(x),m.rangedomain)
+mapD(m::FwdCircleMap,x) = m.dfdx(x)
+@compat mapP(m::FwdCircleMap,x) = (m(x),m.dfdx(x))
+
+mapinv(m::FwdCircleMap,i::Integer,y) = mod(domain_newton(m.f,m.dfdx,interval_mod(y+i*arclength(m.rangedomain),m.fa,m.fb),
+    m.domain),m.domain)
+mapinvD(m::FwdCircleMap,i::Integer,y) = m.dfdx(mapinv(m,i,y))
+function mapinvP(m::FwdCircleMap,i::Integer,y)
+  x = mapinv(m,i,y)
+  (x,inv(m.dfdx(x)))
+end
+
+
+immutable RevCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
+  v::ff
+  dvdx::gg
+  domain::D
+  rangedomain::R
+  cover::Int
+  va::T
+  vb::T
+
+  function RevCircleMap(v,dvdx,domd,randm)
+
+    # @assert isempty(∂(ran)) isempty(∂(dom))
+    ra = first(randm); va = v(ra)
+    dr = arclength(randm); dd = arclength(domd)
+    cover = 1; vr = v(ra+dr)-va
+    while (abs(vr) <= dd && cover < 10000)
+      vr = v(ra+cover*dr)-va
+      abs(vr) ≈ dd && break
+      abs(vr) > dd && error("Inverse lift doesn't appear to have an inverse")
+      cover += 1
+    end
+    cover == 10000 && error("Can't get to the end of the inverse lift after 10000 steps")
+
+    new(v,dvdx,domd,randm,cover,va,v(last(randm)))
+  end
+end
+function RevCircleMap{ff,gg}(v::ff,dvdx::gg,dom,ran)
+  domd = PeriodicDomain(dom); randm = PeriodicDomain(ran)
+  RevCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(randm)}(v,dvdx,domd,randm)
+end
+
+@compat (m::RevCircleMap)(x) = domain_newton(m.v,m.dvdx,interval_mod(x,m.va,m.vb),m.rangedomain)
+@compat mapD(m::RevCircleMap,x) = inv(m.dvdx(m(x)))
+function mapP(m::RevCircleMap,x)
+  @compat y = m(x)
+  (y,inv(m.dvdx(y)))
+end
+
+mapinv(m::RevCircleMap,i::Integer,y) = m.v(y+i*arclength(m.rangedomain))
+mapinvD(m::RevCircleMap,i::Integer,y) = m.dvdx(y+i*arclength(m.rangedomain))
+function mapinvP(m::RevCircleMap,i::Integer,y)
+  ys = y+i*arclength(m.rangedomain)
+  (m.v(ys),m.dvdx(ys))
+end
+
+
+
+
+# autodiff
+FwdCircleMap(f,d,r) = FwdCircleMap(f,autodiff_dual(f,d),d,r);
+RevCircleMap(f,d,r) = RevCircleMap(f,autodiff_dual(f,r),d,r);
+CircleMap(f,d,r;dir::AbstractString="fwd") = dir == "fwd" ?
+  FwdCircleMap(f,d,r) : RevCircleMap(f,d,r)
+
+
+
+CircleMap(f,dfdx,dom,ran;dir::AbstractString="fwd") =
+      dir == "fwd" ? FwdCircleMap(f,dfdx,dom,ran) : RevCircleMap(f,dfdx,dom,ran)
+
+ncover(m::AbstractCircleMap) = m.cover
+
 #mapDsign(m::MarkovMap,i::Integer) = m.sgns[i]
 
 #getindex(m::InverseDerivativeMarkovMap,:dvdx) = m.dvdx
@@ -327,6 +219,22 @@ end
 
 
 # Inducing
+
+immutable InducedMarkovMap{M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
+  m::M
+  b::B
+  domain::D
+  rangedomain::R
+  function InducedMarkovMap(m,b,dom,ran) #requires m,b: their domains -> m ∪ b
+    @assert dom == ran
+    @assert domain(m) == dom
+    @assert rangedomain(b) == rangedomain(m)
+    @assert domain(m) == setdiff(rangedomain(m),domain(b))
+    new(m,b,dom,ran)
+  end
+end
+InducedMarkovMap(m::MarkovMap,b::MarkovBranch,dom::Domain,ran::Domain) =
+  InducedMarkovMap{typeof(m),typeof(b),typeof(dom),typeof(ran)}(m,b,dom,ran)
 
 function mapinduceP(b::MarkovBranch,x) #hack
   y = copy(x)
@@ -364,6 +272,13 @@ mapD(m::InducedMarkovMap,x) = mapP(m,x)[2]
 
 
 
+
+# Domain calls
+
+for TYP in (:MarkovMap,:InducedMarkovMap,:FwdCircleMap,:RevCircleMap)
+  @eval ApproxFun.domain(m::$TYP) = m.domain
+  @eval rangedomain(m::$TYP) = m.rangedomain
+end
 
 # InverseCache
 
