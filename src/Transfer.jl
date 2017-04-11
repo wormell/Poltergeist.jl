@@ -60,39 +60,33 @@ end
 
 # transferbranch
 
-function default_transferbranch(x,b::MarkovBranch,sk::BasisFun,T)
-  (v,dvdx) = mapinvP(b,x)
-  abs(det(dvdx)).*getbasisfun(v,sk,T)
-end
-function default_transferbranch_int(x,y,b::MarkovBranch,sk::BasisFun,T)
-  vy = mapinv(b,y); vx = mapinv(b,x)
-  sgn = sign((vy-vx)/(y-x))
-  sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
-end
-
-transferbranch(x,b::MarkovBranch,sk::BasisFun,T) = default_transferbranch(x,b,sk,T)
-transferbranch_int(x,y,b::MarkovBranch,sk::BasisFun,T) = default_transferbranch_int(x,y,b,sk,T)
-
 function transferbranch(x,b::MarkovBranch,f,T)
   (v,dvdx) = mapinvP(b,x)
-  abs(det(dvdx)).*f(v)
+  abs(det(dvdx))*f(v)
 end
 function transferbranch_int(x,y,b::MarkovBranch,f,T)
   csf = cumsum(f)
-  (v,dvdx) = mapinvP(b,x)
   vy = mapinv(b,y); vx = mapinv(b,x)
   sgn = sign((vy-vx)/(y-x))
   sgn*(csf(vy)-csf(vx))
 end
 
+function transferbranch(x,b::MarkovBranch,sk::BasisFun,T)
+  (v,dvdx) = mapinvP(b,x)
+  abs(det(dvdx))*getbasisfun(v,sk,T)
+end
+function transferbranch_int(x,y,b::MarkovBranch,sk::BasisFun,T)
+  vy = mapinv(b,y); vx = mapinv(b,x)
+  sgn = sign((vy-vx)/(y-x))
+  sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
+end
 
 # Transfer function gives you values of LT(x)
 
-function transferfunction(x,m::MarkovMap,sk,T)
+function transferfunction(x,m::MarkovMap,f,T)
   y = zero(eltype(x));
-
   for b in branches(m)
-    y += transferbranch(x,b,sk,T)
+    y += transferbranch(x,b,f,T)
   end;
   y
 end
@@ -105,6 +99,49 @@ function transferfunction_int(x,y,m::MarkovMap,sk,T)
   end;
   q
 end
+
+
+# Transfer function for CircleMaps
+
+function transferfunction(x,m::AbstractCircleMap,f,T)
+  y = zero(eltype(x));
+  for b = 1:ncover(m)
+    (v,dvdx) = mapinvP(m,b,x)
+    y += abs(det(dvdx))*f(v)
+  end;
+  y
+end
+
+function transferfunction_int(x,y,m::AbstractCircleMap,f,T)
+  q = zero(eltype(x));
+  csf = cumsum(f)
+  for b = 1:ncover(m)
+    vy = mapinv(m,b,y); vx = mapinv(m,b,x)
+    sgn = sign((vy-vx)/(y-x))
+    q += sgn*(csf(vy)-csf(vx))
+  end;
+  q
+end
+
+function transferfunction(x,m::AbstractCircleMap,sk::BasisFun,T)
+  y = zero(eltype(x));
+  for b = 1:ncover(m)
+    (v,dvdx) = mapinvP(m,b,x)
+    y += abs(det(dvdx)).*getbasisfun(v,sk,T)
+  end
+  y
+end
+function transferfunction_int(x,y,m::AbstractCircleMap,sk::BasisFun,T)
+  q = zero(eltype(x));
+  for b = 1:ncover(m)
+    vy = mapinv(m,b,y); vx = mapinv(m,b,x)
+    sgn = sign((vy-vx)/(y-x))
+    q += sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
+  end
+  q
+end
+
+
 
 # Transfer a fun - to improve upon
 function transfer(m::AbstractMarkovMap,fn)
@@ -178,7 +215,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       end
 
       if logn == 21
-        warn("Maximum number of coefficients "*string(2^20+1)*" reached in constructing $(k)th column.")
+        warn("Maximum number of coefficients "*string(2^20+1)*" reached in constructing $(kk)th column.")
         coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
       end
 

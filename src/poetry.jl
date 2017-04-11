@@ -54,7 +54,7 @@ immutable MarkovMapDerivative{M<:AbstractMarkovMap}
   m::M
 end
 @compat (md::MarkovMapDerivative)(x::Number) = mapD(md.m,x)
-Base.ctranspose(b::MarkovMap) = MarkovMapDerivative(b)
+Base.ctranspose(b::AbstractMarkovMap) = MarkovMapDerivative(b)
 
 
 # # plotting
