@@ -1,12 +1,12 @@
 # MarkovMaps
-export MarkovMap, branch, nbranches, induce, CircleMap
+export MarkovMap, branch, nbranches, modulomap, induce, CircleMap
 
 abstract AbstractMarkovMap{D<:Domain,R<:Domain}# <: Function
 #abstract AbstractDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: AbstractMarkovMap{D,R,T,FF}
 
 Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(domain(m))*"↦"*string(rangedomain(m)) #branches??
 Base.eltype(m::AbstractMarkovMap) = eltype(rangedomain(m))
-Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
+# Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
 
 
 immutable MarkovMap{D<:Domain,R<:Domain,B<:MarkovBranch} <: AbstractMarkovMap{D,R}
@@ -47,7 +47,7 @@ end
 #   MarkovMap(dom,ran,branch(v1,v2,v3,v4,ran,dir))
 # end
 
-function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran;dir::AbstractString="fwd")
+function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran;dir=Fwd)
   @assert length(fs) == length(ds)
   dsm = [Domain(d) for d in ds]
   @compat MarkovMap([branch(fs[i],dsm[i],ran;dir=dir) for i in eachindex(fs)],
@@ -107,6 +107,38 @@ getbranch(m::MarkovMap,x) = in(x,m.domain) ? findfirst([in(x,domain(b)) for b in
 # # end
 # MarkovMap{ff}(f::AbstractVector{ff},dom::Domain,args...;kwargs...) = MarkovMap(f,dom,dom,args...;kwargs...)
 
+# nice constructors
+
+type Offset{F,T}
+  f::F
+  offset::T
+end
+@compat (of::Offset)(x) = of.f(x)-of.offset
+
+function modulomap{ff}(f::ff,df,dom,ran)
+  domd = Domain(dom); randm = Domain(ran)
+  fa = f(first(domd)); fb = f(last(domd))
+  L = arclength(randm)
+  nb_est = (fb-fa)/L; nb = round(Int,nb_est) # number of branches
+  σ = sign(nb); NB = abs(nb)
+
+  # @assert in(fa,∂(randm))
+  # @assert nb_est ≈ nb
+  @assert nb != 0
+
+  breakpoints = Array(eltype(domd),NB+1)
+  breakpoints[1] = first(domd)
+
+  for i = 1:NB-1
+    breakpoints[i+1] = domain_newton(f,df,fa+σ*i*L,domd)
+  end
+  breakpoints[end] = last(domd)
+
+  fs = [Offset(f,(i-1)*σ*L) for i = 1:NB]
+  ds = [Interval(breakpoints[i],breakpoints[i+1]) for i = 1:NB]
+  MarkovMap(fs,fill(df,NB),ds,randm)
+end
+modulomap(f,dom,ran) = modulomap(f,autodiff_dual(f,dom),dom,ran)
 
 # CircleMaps
 
