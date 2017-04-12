@@ -15,7 +15,7 @@ immutable FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
   rangedomain::R
   #  sgn::T
   function FwdExpandingBranch(fc,dfdxc,dom,ran)
-    ~isempty(∂(ran)) && @assert all([in(fc(p),∂(ran)) for p in ∂(dom)])
+    # @assert all([in(fc(p),∂(ran)) for p in ∂(dom)])
     new(fc,dfdxc,dom,ran)
   end
 end

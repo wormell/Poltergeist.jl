@@ -185,3 +185,9 @@ function getbasisfun{F<:TensorSpace,K<:Integer}(x,sk::BasisFun{F,K},T)
   @compat prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i]),T) for i = eachindex(sk.s.spaces))
 end
 # no getbasisfun_int as you don't have antiderivatives
+
+
+# # Directions
+# abstract FunctionDirection
+# type Fwd <: FunctionDirection; end
+# type Rev <: FunctionDirection; end
