@@ -83,7 +83,7 @@ function AbelFunction{T<:Real,ff,gg}(h::ff,dh::gg,alpha::T,r0::T,p::T=zero(T),sg
   R
 end
 
-hdisc_guess(R::AbelFunction,y) = toring(abs(ringhconv(R,y)) > 3 ? ringhconv(R,ringhconv(R,y)-1) : y)
+hdisc_guess(R::AbelFunction,y) = toring(R,abs(ringhconv(R,y)) > 3 ? ringhconv(R,ringhconv(R,y)-1) : y)
 
 function hdisc_newton{T,U}(R::AbelFunction{T},y::U,rad::T=abs(y)/max(0.1,1-abs(y)),
                          x::U=hdisc_guess(R,y),tol=10eps(rad))
