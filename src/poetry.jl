@@ -1,4 +1,4 @@
-export acim, linearresponse, correlationsum, birkhoff_cov, birkhoff_var
+export acim, linearresponse, correlationsum, birkhoffcov, birkhoffvar
 
 acim(S::SolutionInvWrapper) = S.op\S.u
 acim(L::Operator,u::Fun=uniform(domainspace(L))) = SolutionInv(L,u)\u

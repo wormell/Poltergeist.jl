@@ -16,10 +16,7 @@ ApproxFun.@wrapper SolutionInvWrapper
 
 function uniform(S::Space)
   u = Fun(one,S)
-  Tu = sum(u)
-  for i = 1:ncoefficients(u)
-    u.coefficients[i] /= Tu
-  end
+  scale!(u.coefficients,1/sum(u))
   u
 end
 uniform(D::Domain) = uniform(Space(D))
