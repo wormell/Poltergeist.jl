@@ -47,7 +47,7 @@ end
 #   MarkovMap(dom,ran,branch(v1,v2,v3,v4,ran,dir))
 # end
 
-function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran;dir=Fwd)
+function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran;dir::AbstractString="fwd")
   @assert length(fs) == length(ds)
   dsm = [Domain(d) for d in ds]
   @compat MarkovMap([branch(fs[i],dsm[i],ran;dir=dir) for i in eachindex(fs)],
@@ -211,11 +211,12 @@ function RevCircleMap{ff,gg}(v::ff,dvdx::gg,dom,ran)
   RevCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(randm)}(v,dvdx,domd,randm)
 end
 
-@compat (m::RevCircleMap)(x) = domain_newton(m.v,m.dvdx,interval_mod(x,m.va,m.vb),m.rangedomain)
-@compat mapD(m::RevCircleMap,x) = inv(m.dvdx(m(x)))
+mapL(m::RevCircleMap,x) = domain_newton(m.v,m.dvdx,interval_mod(x,m.va,m.vb),m.rangedomain)
+@compat (m::RevCircleMap)(x) = mod(mapL(m,x),m.domain)
+@compat mapD(m::RevCircleMap,x) = inv(m.dvdx(mapL(m,x)))
 function mapP(m::RevCircleMap,x)
-  @compat y = m(x)
-  (y,inv(m.dvdx(y)))
+  @compat y = mapL(m,x)
+  (interval_mod(y,m.domain),inv(m.dvdx(y)))
 end
 
 mapinv(m::RevCircleMap,i::Integer,y) = m.v(y+i*arclength(m.rangedomain))
