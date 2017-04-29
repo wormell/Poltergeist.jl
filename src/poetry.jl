@@ -4,24 +4,24 @@ acim(S::SolutionInvWrapper) = S.op\S.u
 acim(L::Operator,u::Fun=uniform(domainspace(L))) = SolutionInv(L,u)\u
 acim(M::AbstractMarkovMap) = acim(Transfer(M))
 
-function normalise_for_correlation(f::Fun,r::Fun=uniform(space(f)))
+function zero_to(f::Fun,r::Fun=uniform(space(f)))
   rf = r*f
   rf -= r*sum(rf)/sum(r)
 end
 
 linearresponse(S::SolutionInvWrapper,X::Fun) = S\(-acim(S)*X)'
 function correlationsum(S::SolutionInvWrapper,A::Fun,r=acim(S))
-  S \ normalise_for_correlation(A,r)
+  S \ zero_to(A,r)
 end
 
 function birkhoffcov(S::SolutionInvWrapper,A::Fun,B::Fun)
   r = acim(S)
-  sum(B*correlationsum(S,A,r)) + sum(A*correlationsum(S,B,r)) - sum(B*normalise_for_correlation(A,r))
+  sum(B*correlationsum(S,A,r)) + sum(A*correlationsum(S,B,r)) - sum(B*zero_to(A,r))
 end
 
 function birkhoffvar(S::SolutionInvWrapper,A::Fun)
   r = acim(S)
-  2sum(A*correlationsum(S,A,r)) - sum(A*normalise_for_correlation(A,r))
+  2sum(A*correlationsum(S,A,r)) - sum(A*zero_to(A,r))
 end
 
 for OP in (:linearresponse,:correlationsum,:birkhoffvar)
