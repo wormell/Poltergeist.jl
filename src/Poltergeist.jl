@@ -1,5 +1,5 @@
 module Poltergeist
-  using Base, ApproxFun, BandedMatrices, Compat, DualNumbers, FixedSizeArrays, IntervalSets#, PyPlot#, FastTransforms
+  using Base, ApproxFun, BandedMatrices, Compat, DualNumbers, StaticArrays, IntervalSets#, PyPlot#, FastTransforms
 
 import Base: values,getindex,setindex!,*,.*,+,.+,-,.-,==,<,<=,>,|,
 >=,./,/,.^,^,\,∪,transpose, size, length,  eltype, inv, mod#issymmetric,

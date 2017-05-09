@@ -49,7 +49,7 @@ mod(x,p::PeriodicInterval) = interval_mod(x,p.a,p.b)
 domain_newton{U}(f,df,y::U,D::Domain,x::U=convert(U,rand(D)),tol=400eps(eltype(U))) = basic_newton(f,df,y,x,tol)
 domain_guess(x,dom::Domain,ran::Domain) = rand(ran)
 
-domain_guess{N}(x::Vec{N},dom::ProductDomain,ran::ProductDomain) = Vec{N}([interval_guess(x[i],dom.domains[i],ran.domains[i]) for i =1:N])
+domain_guess{N}(x::SVector{N},dom::ProductDomain,ran::ProductDomain) = SVector{N}([interval_guess(x[i],dom.domains[i],ran.domains[i]) for i =1:N])
 
 function basic_newton{U}(f,df,y::U,x::U,tol=40eps(U))
   z = x
