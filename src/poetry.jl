@@ -10,7 +10,7 @@ function zero_to(f::Fun,r::Fun=uniform(space(f)))
 end
 
 function linearresponse(S::SolutionInvWrapper,X::Fun)
-  @assert all(X.(∂(domain(X))) .≈ 0)
+  @assert all(isapprox.(X.(∂(domain(X))),0))
   S\(-acim(S)*X)'
 end
 correlationsum(S::SolutionInvWrapper,A::Fun,r=acim(S)) = S \ zero_to(A,r)

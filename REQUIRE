@@ -1,4 +1,4 @@
-julia 0.4
+julia 0.5
 ApproxFun 0.6.0
 BandedMatrices 0.2
 Compat 0.24.0
