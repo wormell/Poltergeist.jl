@@ -13,30 +13,31 @@ fv1d(x) = 1/2+cos(2pi*x)/4; fv2d = fv1d
 #Periodic domain
 println("Fourier tests")
 d1 = PeriodicInterval(0,1.)
-M1b = CircleMap(fv1,fv1d,d1,d1,dir="rev")
+M1b = CircleMap(fv1,d1,dir="rev",diff=fv1d)
 acim(M1b)
 @time ρ1b = acim(M1b)
 
-M1f = CircleMap(f1,f1d,d1,d1)
+M1f = CircleMap(f1,d1,diff=f1d)
 acim(M1f)
 @time ρ1f = acim(M1f)
-#
+println("Should all be ≤0.3s")
+
 # Non-periodic domain
 println("Chebyshev tests")
-d2 = Segment(d1)
-M2b = MarkovMap([fv1,fv2],[fv1d,fv2d],[0..0.5,0.5..1],d2,dir="rev");
+d2 = Segment(0..1.)
+@test Poltergeist.coveringsegment([0..0.5,0.5..1]) == d2
+M2b = MarkovMap([fv1,fv2],[0..0.5,0.5..1],dir=Reverse,diff=[fv1d,fv2d]);
 acim(M2b)
 @time ρ2b = acim(M2b)
 
-M2ba = MarkovMap([fv1,fv2],[0..0.5,0.5..1],d2,dir="rev"); #autodiff comparison
+M2ba = MarkovMap([fv1,fv2],[0..0.5,0.5..1],dir=Reverse); #autodiff comparison
 acim(M2ba)
 @time ρ2ba = acim(M2ba)
-
-
 
 M2f = MarkovMap([f1,f2],[0..0.5,0.5..1],d2)
 acim(M2f)
 @time ρ2f = acim(M2f)
+println("Should be ≤0.12s")
 
 pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
 @test maxabs(ρ1f.(pts) - ρ2f.(pts)) < 400eps(1.)
@@ -47,6 +48,20 @@ pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
 # @test transfer(M1f,x->Fun(Fourier(d1),[0.,1.])(x),0.28531) == Poltergeist.transferfunction(0.28531,M1f,Poltergeist.BasisFun(Fourier(d1),2),Float64)
 # @test_approx_eq transfer(M2f,exp,0.28531) (Transfer(M2f)*Fun(exp,Space(d2)))(0.28531)
 
+println("Lanford test")
+lan_lift(x) = 5x/2 - x^2/2
+lan = modulomap(lan_lift,0..1);
+K = SolutionInv(lan);
+rho = acim(K);
+l_exp = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
+sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1))
+K = SolutionInv(lan);
+@time rho = acim(K);
+@time l_exp = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
+@time sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1))
+
+@test_approx_eq l_exp 0.657661780006597677541582
+@test_approx_eq sigmasq_A 0.360109486199160672898824
 
 # Correlation sums
 A1 = Fun(x->sin(sin(2pi*x)),d1)
@@ -61,23 +76,24 @@ test_pts = rand(d2,20)
 
 #Inducing
 println("Inducing tests")
-M2bd = MarkovMap([fv1,fv2],[fv1d,fv2d],[0..0.5,0.5..1],d2,dir="rev");
+M2bd = MarkovMap([fv1,fv2],[0..0.5,0.5..1],d2,dir=Reverse,diff=[fv1d,fv2d]);
 M2bi = induce(M2bd,1)
 # acim(M2bi)
-@time ρ2bi = acim(M2bi)
+@time ρ2bi = acim(M2bi); println("Should be ≤4s")
 pts = points(space(ρ2bi),100)
 @compat normi = diff(cumsum(ρ2b).(∂(domain(M2bi))))[1]
 @test maxabs(ρ2bi.(pts) - ρ2b.(pts)/normi) < 200eps(1.)
 
-## TODO: put back in with CircleMap
 # Time series
 println("Time series tests")
 NI = 10^6; NB = 10^3
 @time ts = timeseries(M1f,NI,ρ1f)
+println("Should be ≤4s")
 @test abs(sum(sin(sin(2pi*ts)))/NI - sum(ρ1f*A1))< (4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
 
 @time cts = timehist(M2f,NI,NB,ρ2f)
 @test abs(sum(sin(sin(2pi*cts[1][1:end-1])).*cts[2])/NI - sum(ρ2f*A2))< 1/NB+(4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
+println("Should be ≤27s")
 
 #TODO: fix
 # # Intermittent maps
@@ -98,3 +114,15 @@ NI = 10^6; NB = 10^3
 #   # pts = points(domainspace(L),40)
 #   # @time pfull =
 # end
+
+# 2D tests - in testing
+println("2D tests ☠️")
+using StaticArrays
+standardmap_inv_lift(x::SVector) = SVector(x[1] - 0.1*sin(x[2] - x[1]),x[2]-x[1]);
+standardmap_inv_diff(x::SVector) = SMatrix{2,2}(1,0,0,1); # As only determinant is important...
+dom = PeriodicInterval()^2
+ # binv = branch(standardmap_inv_lift,standardmap_inv_diff,dom,dom,dir="rev"); # deprecated
+binv= branch(standardmap_inv_lift,dom,dom,standardmap_inv_diff,dir=Reverse)
+standardmap = MarkovMap([binv],dom,dom)
+L_standard = Transfer(standardmap)
+ApproxFun.resizedata!(L_standard,:,2)

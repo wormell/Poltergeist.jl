@@ -125,59 +125,33 @@ end
 
 # branch constructors
 
-function branch{ff,gg}(f::ff,dfdx::gg,dom,ran;dir::AbstractString="fwd",ftype::Type{ff}=ff,dfdxtype::Type{gg}=gg)
-  domd = Domain(dom); randm  = Domain(ran);
-  dir=="fwd" ? FwdExpandingBranch{ftype,dfdxtype,typeof(domd),typeof(randm)}(f,dfdx,domd,randm) :
-        RevExpandingBranch{ftype,dfdxtype,typeof(domd),typeof(randm)}(f,dfdx,domd,randm)
-end
+autodiff(f,d) = autodiff_dual(f,ApproxFun.checkpoints(Domain(d)))
+autodiff(f::Fun,d) = f'
 
-# function branch{ff,gg,D<:Domain,R<:Domain}(fs::AbstractVector{ff},dfdxs::AbstractVector{gg},doms::AbstractVector{D},ran::R,dir::AbstractString="fwd")
-#   @assert length(fs) == length(dfdxs)
-#   @assert length(doms) == length(fs)
-#   ftype = promote_type([typeof(f) for f in fs]...)
-#   dfdxtype = promote_type([typeof(f) for f in dfdxs]...)
-#   TYP = dir=="fwd" ? FwdExpandingBranch{ftype,dfdxtype,D,R} : #eltype(doms),typeof(ran)
-#   RevExpandingBranch{ftype,dfdxtype,D,R}
-#   TYP[branch(fs[i],dfdxs[i],doms[i],ran,dir,ftype,dfdxtype) for i = 1:length(fs)]
-# end
-# function branch{ff,gg,T<:Number,R<:Domain}(fs::AbstractVector{ff},dfdxs::AbstractVector{gg},bl::AbstractVector{T},bu::AbstractVector{T},ran::R,dir::AbstractString="fwd")
-#   @assert length(bl) == length(fs)
-#   @assert length(bu) == length(fs)
-#   branch(fs,dfdxs,ApproxFun.Segment{T}[Segment(bl[i],bu[i]) for i = 1:length(bl)],ran,dir)
-# end
-#
-# function branch{ff,gg,T<:Number,R<:Domain}(fs::AbstractVector{ff},dfdxs::AbstractVector{gg},b::AbstractVector{T},ran::R,dir::AbstractString="fwd")
-#   @assert length(fs) == (length(b)-1)
-#   @assert issorted(b)
-#   branch(fs,dfdxs,ApproxFun.Segment{T}[Segment(b[i],b[i+1]) for i = 1:length(b)-1],ran,dir)
-# end
-
-function autodiff_dual(f,bi::Number)
+function autodiff_dual(f,bi)
   fd = FunctionDerivative(f)
   try
-    fd(bi)
+    for b in bi
+      fd(b)
+    end
   catch e
     isa(e,MethodError) && error("To use automatic differentiation, your function must accept DualNumbers")
     throw(e)
   end
   fd
 end
-#TODO: fix this bad overload:
-autodiff_dual(f,bi) = autodiff_dual(f,rand(Domain(bi)))
 
-function branch{ff}(fs::AbstractVector{ff},ds::AbstractVector,args...;kwargs...)
-#   for (i,f) in enumerate(fs)
-#     check_dualmethods(f,b[i])
-#   end
-  branch(fs,[autodiff_dual(fs[i],ds[i]) for i in eachindex(fs)],ds,args...;kwargs...)
+typealias DomainInput Union{Domain,IntervalSets.AbstractInterval}
+
+function branch(f,dom,ran,diff=autodiff(f,(dir=Forward ? dom : ran));dir=Forward,
+                      ftype=typeof(f),difftype=typeof(diff))
+  domd = Domain(dom); randm  = Domain(ran);
+  dir==Forward ? FwdExpandingBranch{ftype,difftype,typeof(domd),typeof(randm)}(f,diff,domd,randm) :
+        RevExpandingBranch{ftype,difftype,typeof(domd),typeof(randm)}(f,diff,domd,randm)
 end
-branch(f,d::Union{Domain,IntervalSets.AbstractInterval},args...;kwargs...) = branch(f,autodiff_dual(f,d),d,args...;kwargs...)
+branch(f,dom,ran,diff::Void;dir=Forward) = branch(f,dom,ran;dir)
 
-# branch{ff<:Fun,T}(fs::AbstractVector{ff},b::AbstractVector{T},args...;kwargs...) =
-#   branch(fs,[f' for f in fs],b,args...;kwargs...)
-branch(f::Fun,d::Union{Domain,IntervalSets.AbstractInterval},args...;kwargs...) = branch(f,f',d,args...;kwargs...)
-
-
+@deprecate branch(f,dfdx,dom::Domain,ran::Domain;dir=Forward) branch(f,dom,ran,diff;dir=dir)
 
 
 for TYP in (:FwdExpandingBranch,:RevExpandingBranch,:NeutralBranch)

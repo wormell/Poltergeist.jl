@@ -1,4 +1,4 @@
-export rangedomain
+export rangedomain, Forward, Reverse
 rangedomain(op::Operator) = domain(rangespace(op))
 
 containstransfer(M::Operator) = ApproxFun.iswrapper(M::Operator) && containstransfer(M.op)
@@ -188,6 +188,7 @@ end
 
 
 # # Directions
-# abstract FunctionDirection
-# type Fwd <: FunctionDirection; end
-# type Rev <: FunctionDirection; end
+abstract Direction
+type Forward <: Direction; end
+
+type Reverse <: Direction; end

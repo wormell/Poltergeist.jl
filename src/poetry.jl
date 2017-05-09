@@ -9,20 +9,24 @@ function zero_to(f::Fun,r::Fun=uniform(space(f)))
   rf -= r*sum(rf)/sum(r)
 end
 
-linearresponse(S::SolutionInvWrapper,X::Fun) = S\(-acim(S)*X)'
-function correlationsum(S::SolutionInvWrapper,A::Fun,r=acim(S))
-  S \ zero_to(A,r)
+function linearresponse(S::SolutionInvWrapper,X::Fun)
+  @assert all(X.(∂(domain(X))) .≈ 0)
+  S\(-acim(S)*X)'
 end
+correlationsum(S::SolutionInvWrapper,A::Fun,r=acim(S)) = S \ zero_to(A,r)
 
 function birkhoffcov(S::SolutionInvWrapper,A::Fun,B::Fun)
-  r = acim(S)
-  sum(B*correlationsum(S,A,r)) + sum(A*correlationsum(S,B,r)) - sum(B*zero_to(A,r))
+  r = acim(S); Az = zero_to(A,r); Bz = zero_to(B,r)
+  sum(B*(S\Az)) + sum(A*(S\Bz)) - sum(B*Az)
 end
 
 function birkhoffvar(S::SolutionInvWrapper,A::Fun)
-  r = acim(S)
-  2sum(A*correlationsum(S,A,r)) - sum(A*zero_to(A,r))
+  Az = zero_to(A,acim(S))
+  2sum(A*(S\Az)) - sum(A*Az)
 end
+
+#TODO: Lyapunov exponent
+# function lyapunov(S::SolutionInvWrapper{})
 
 for OP in (:linearresponse,:correlationsum,:birkhoffvar)
   @eval $OP(L::Operator,X::Fun) = $OP(SolutionInv(L),X)
