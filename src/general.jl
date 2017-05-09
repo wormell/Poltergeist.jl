@@ -190,5 +190,4 @@ end
 # # Directions
 abstract Direction
 type Forward <: Direction; end
-
 type Reverse <: Direction; end
