@@ -188,7 +188,9 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       #       if mc ≤ 2^4
       #         coeffs = Fun(f,rs).coefficients
       #       else
-      # code from ApproxFun (src/Fun/constructors.jl) - the difference is we start at n \approx mc
+
+      # code from ApproxFun v0.5 (src/Fun/constructors.jl) under BSD license (same as this package)
+      # ( the difference is we start at n \approx mc )
 
       r=ApproxFun.checkpoints(rs)
       fr=[transferfunction(rr,getmap(L),BasisFun(domainspace(L),kk),T) for rr in r]
