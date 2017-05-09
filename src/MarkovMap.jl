@@ -5,7 +5,7 @@ abstract AbstractMarkovMap{D<:Domain,R<:Domain}# <: Function
 #abstract AbstractDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: AbstractMarkovMap{D,R,T,FF}
 
 Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(domain(m))*"↦"*string(rangedomain(m)) #branches??
-Base.eltype(m::AbstractMarkovMap) = eltype(rangedomain(m))
+# Base.eltype(m::AbstractMarkovMap) = eltype(rangedomain(m))
 # Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
 
 
@@ -31,35 +31,15 @@ function MarkovMap{B<:MarkovBranch}(branches::AbstractVector{B},dom,ran)
   MarkovMap{typeof(domd),typeof(randm),B}(branches,domd,randm)
 end
 
-# MarkovMap{T,ff<:Number}(dom::Domain,ran::Domain,f::AbstractVector{ff},dfdx::AbstractVector{ff},bl::AbstractVector{T},bu::AbstractVector{T}) =
-#   MarkovMap{T,ff}(dom,ran,f,dfdx,bl,bu)
+coveringsegment(ds::AbstractArray) = coveringsegment([Domain(d) for d in ds])
+coveringsegment{T<:Domain}(dsm::AbstractArray{T}) = Segment(minimum(first(Domain(d)) for d in dsm),maximum(last(Domain(d)) for d in dsm))
 
-# function MarkovMap{D<:Domain,R<:Domain}(
-#     dom::D,ran::R,v1::AbstractVector,v2::AbstractVector,dir::AbstractString="fwd")
-#   MarkovMap(dom,ran,branch(v1,v2,ran,dir))
-# end
-# function MarkovMap{D<:Domain,R<:Domain}(
-#     dom::D,ran::R,v1::AbstractVector,v2::AbstractVector,v3::AbstractVector,dir::AbstractString="fwd")
-#   MarkovMap(dom,ran,branch(v1,v2,v3,ran,dir))
-# end
-# function MarkovMap{D<:Domain,R<:Domain}(
-#     dom::D,ran::R,v1::AbstractVector,v2::AbstractVector,v3::AbstractVector,v4::AbstractVector,dir::AbstractString="fwd")
-#   MarkovMap(dom,ran,branch(v1,v2,v3,v4,ran,dir))
-# end
-
-function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran;dir::AbstractString="fwd")
+function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran=coveringsegment(ds);dir=Forward,
+          diff=[autodiff(fs[i],(dir==Forward ? ds[i] : ran)) for i in eachindex(fs)])
   @assert length(fs) == length(ds)
-  dsm = [Domain(d) for d in ds]
-  @compat MarkovMap([branch(fs[i],dsm[i],ran;dir=dir) for i in eachindex(fs)],
-        Segment(minimum(first(d) for d in dsm),maximum(last(d) for d in dsm)),Domain(ran))
-end
-
-function MarkovMap(fs::AbstractVector,gs::AbstractVector,ds::AbstractVector,ran;dir::AbstractString="fwd")
-  @assert length(fs) == length(gs)
-  @assert length(fs) == length(ds)
-  dsm = [Domain(d) for d in ds]
-  @compat MarkovMap([branch(fs[i],gs[i],dsm[i],ran;dir=dir) for i in eachindex(fs)],
-        Segment(minimum(first(d) for d in dsm),maximum(last(d) for d in dsm)),Domain(ran))
+  randm=Domain(ran)
+  @compat MarkovMap([branch(fs[i],Domain(ds[i]),randm,diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
+        coveringsegment(ds),Domain(ran))
 end
 
 @compat (m::MarkovMap)(i::Integer,x) = (m.branches[i])(x)
@@ -115,7 +95,7 @@ type Offset{F,T}
 end
 @compat (of::Offset)(x) = of.f(x)-of.offset
 
-function modulomap{ff}(f::ff,df,dom,ran)
+function modulomap{ff}(f::ff,dom,ran=dom;diff=autodiff(f,dom))
   domd = Domain(dom); randm = Domain(ran)
   fa = f(first(domd)); fb = f(last(domd))
   L = arclength(randm)
@@ -130,15 +110,14 @@ function modulomap{ff}(f::ff,df,dom,ran)
   breakpoints[1] = first(domd)
 
   for i = 1:NB-1
-    breakpoints[i+1] = domain_newton(f,df,fa+σ*i*L,domd)
+    breakpoints[i+1] = domain_newton(f,diff,fa+σ*i*L,domd)
   end
   breakpoints[end] = last(domd)
 
   fs = [Offset(f,(i-1)*σ*L) for i = 1:NB]
   ds = [Interval(breakpoints[i],breakpoints[i+1]) for i = 1:NB]
-  MarkovMap(fs,fill(df,NB),ds,randm)
+  MarkovMap(fs,ds,randm,diff=fill(diff,NB))
 end
-modulomap(f,dom,ran) = modulomap(f,autodiff_dual(f,dom),dom,ran)
 
 # CircleMaps
 
@@ -153,7 +132,7 @@ immutable FwdCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
   fa::T
   fb::T
 
-  function FwdCircleMap(f,dfdx,domd,randm)
+  function FwdCircleMap(f,domd,randm,dfdx)
     # @assert isempty(∂(randm)) isempty(∂(domd))
     fa = f(first(domd)); fb = f(last(domd))
     cover_est = (fb-fa)/arclength(randm)
@@ -162,9 +141,9 @@ immutable FwdCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
     new(f,dfdx,domd,randm,abs(cover_integer),fa,fb)
   end
 end
-function FwdCircleMap{ff,gg}(f::ff,dfdx::gg,dom,ran)
+function FwdCircleMap{ff,gg}(f::ff,dom,ran,dfdx::gg=autodiff(f,dom))
   domd = PeriodicDomain(dom); randm = PeriodicDomain(ran)
-  FwdCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(domd)}(f,dfdx,domd,randm)
+  FwdCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(domd)}(f,domd,randm,dfdx)
 end
 
 @compat (m::FwdCircleMap)(x) = mod(m.f(x),m.rangedomain)
@@ -189,7 +168,7 @@ immutable RevCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
   va::T
   vb::T
 
-  function RevCircleMap(v,dvdx,domd,randm)
+  function RevCircleMap(v,domd,randm,dvdx)
 
     # @assert isempty(∂(ran)) isempty(∂(dom))
     ra = first(randm); va = v(ra)
@@ -206,9 +185,9 @@ immutable RevCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
     new(v,dvdx,domd,randm,cover,va,v(last(randm)))
   end
 end
-function RevCircleMap{ff,gg}(v::ff,dvdx::gg,dom,ran)
+function RevCircleMap{ff,gg}(v::ff,dom,ran=dom,dvdx::gg=autodiff(v,ran))
   domd = PeriodicDomain(dom); randm = PeriodicDomain(ran)
-  RevCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(randm)}(v,dvdx,domd,randm)
+  RevCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(randm)}(v,domd,randm,dvdx)
 end
 
 mapL(m::RevCircleMap,x) = domain_newton(m.v,m.dvdx,interval_mod(x,m.va,m.vb),m.rangedomain)
@@ -230,15 +209,10 @@ end
 
 
 # autodiff
-FwdCircleMap(f,d,r) = FwdCircleMap(f,autodiff_dual(f,d),d,r);
-RevCircleMap(f,d,r) = RevCircleMap(f,autodiff_dual(f,r),d,r);
-CircleMap(f,d,r;dir::AbstractString="fwd") = dir == "fwd" ?
-  FwdCircleMap(f,d,r) : RevCircleMap(f,d,r)
-
-
-
-CircleMap(f,dfdx,dom,ran;dir::AbstractString="fwd") =
-      dir == "fwd" ? FwdCircleMap(f,dfdx,dom,ran) : RevCircleMap(f,dfdx,dom,ran)
+# FwdCircleMap(f,d,r=d;diff=autodiff(f,d)) = FwdCircleMap(f,diff,d,r);
+# RevCircleMap(f,d,r=d;diff=autodiff(f,r)) = RevCircleMap(f,diff,d,r);
+CircleMap(f,d,r=d;dir=Forward,diff=autodiff(f,dir=Forward ? d : r)) = dir == Forward ?
+  FwdCircleMap(f,d,r,diff) : RevCircleMap(f,d,r,diff)
 
 ncover(m::AbstractCircleMap) = m.cover
 
