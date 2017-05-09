@@ -7,7 +7,6 @@ import ApproxFun: domainspace, rangespace, domain, israggedbelow, RaggedMatrix, 
 fromcanonicalD, tocanonicalD, default_raggedmatrix, fromcanonical, tocanonical, space
 
 include("general.jl")
-include("AbelFunction.jl")
 include("MarkovBranch.jl")
 include("MarkovMap.jl")
 include("Transfer.jl")

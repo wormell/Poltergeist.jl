@@ -65,63 +65,9 @@ mapinvP(b::RevExpandingBranch,x) = (mapinv(b,x),mapinvD(b,x))
 
 
 
-# NeutralBranch
-
-immutable NeutralBranch{A<:AbelFunction,D,R} <: MarkovBranch{D,R}
-  ab::A
-  domain::D
-  rangedomain::R
-  function NeutralBranch(abel,domain,rangedomain)
-    @assert in(abel.p,∂(domain)∩∂(rangedomain))
-    @assert issubset(domain,rangedomain)
-    @assert domain != rangedomain
-    @assert length(setdiff(∂(domain),∂(rangedomain)))==1
-    @assert (setdiff(∂(domain),∂(rangedomain))[1]-abel.p)*abel.sgn > 0 "Abel function pointing in the wrong direction"
-    @assert arclength(domain)*abel.h(arclength(domain)^abel.alpha) ≈ arclength(rangedomain) "Branch not Markov"
-    new(abel,domain,rangedomain)
-  end
+# UNDE CONSTRUCTION: NeutralBranch
+immutable NeutralBranch
 end
-NeutralBranch{A<:AbelFunction,D<:Domain,R<:Domain}(abel::A,dom::D,ran::R) =
-  NeutralBranch{typeof(abel),typeof(dom),typeof(ran)}(abel,dom,ran)
-
-
-tocanonical(R::AbelFunction,x) = R.sgn*(x-R.p)
-fromcanonical(R::AbelFunction,x) = R.p + R.sgn*x
-for FUN in (:fromcanonical,:tocanonical)
-  @eval $FUN(b::NeutralBranch,x) = $FUN(b.ab,x)
-end
-
-function NeutralBranch{hh,jj}(h::hh,dh::jj,alpha::Number,r0::Number,dom::Domain,ran::Domain)
-  length(∂(dom)∩∂(ran)) != 1 && error("Edges of domain and range not compatible")
-  p = (∂(dom)∩∂(ran))[1]
-  sgn = sign(setdiff(∂(dom),∂(ran))[1]-p)
-  abel = AbelFunction(h,dh,alpha,r0,p,sgn)
-  zeroat!(abel,setdiff(∂(ran),∂(dom))[1])
-  NeutralBranch(abel,dom,ran)
-end
-
-function unsafe_call(b::NeutralBranch,x)
-  xc = tocanonical(b.ab,x)
-  fromcanonical(b.ab,xc.*b.ab.h(xc.^b.ab.alpha))
-end
-function unsafe_mapD(b::NeutralBranch,x)
-  xc = tocanonical(b.ab,x)
-  alpha = b.ab.alpha
-  b.ab.sgn*(b.ab.h(xc.^alpha) + alpha * xc.^alpha .* b.ab.dh(xc.^alpha))
-end
-unsafe_mapP(b::NeutralBranch,x) = (b(x),mapD(b,x))
-
-function mapinv{T}(b::NeutralBranch,x::T)
-  y = ringhconv(b.ab,toring(b.ab,x))::T
-  fromring(b.ab,ringhconv(b.ab,hdisc_newton(b.ab,y)))
-end
-mapinvD(b::NeutralBranch,x) = mapD(b,mapinvD(b,x))
-function mapinvP(b::NeutralBranch,x)
-  vx = mapinv(b,x)
-  (vx,inv(unsafe_mapD(b,vx)))
-end
-
-
 
 # branch constructors
 
