@@ -40,28 +40,28 @@ birkhoffcov(M::AbstractMarkovMap,X::Fun,Y::Fun) = birkhoffcov(Transfer(M),X,Y)
 immutable MarkovBranchDerivative{B<:MarkovBranch}
   b::B
 end
-@compat (bd::MarkovBranchDerivative)(x::Number) = mapD(bd.b,x)
+(bd::MarkovBranchDerivative)(x::Number) = mapD(bd.b,x)
 Base.ctranspose(b::MarkovBranch) = MarkovBranchDerivative(b)
 # Base.transpose(b::MarkovBranch) = MarkovBranchDerivative(b)
 
 immutable MarkovBranchInverse{B<:MarkovBranch}
   b::B
 end
-@compat (bi::MarkovBranchInverse)(x::Number) = mapinv(bi.b,x)
+(bi::MarkovBranchInverse)(x::Number) = mapinv(bi.b,x)
 inv(b::MarkovBranch) = MarkovBranchInverse(b)
 ## TODO one day: convert routine to MarkovBranch?
 
 immutable MarkovBranchDerivativeInverse{B<:MarkovBranch}
   b::B
 end
-@compat (bi::MarkovBranchDerivativeInverse)(x::Number) = mapinvD(bd.b,x)
+(bi::MarkovBranchDerivativeInverse)(x::Number) = mapinvD(bd.b,x)
 Base.ctranspose(bi::MarkovBranchInverse) = MarkovBranchDerivativeInverse(bi.b)
 # Base.transpose(b::MarkovBranch) = MarkovBranchDerivative(b)
 
 immutable MarkovMapDerivative{M<:AbstractMarkovMap}
   m::M
 end
-@compat (md::MarkovMapDerivative)(x::Number) = mapD(md.m,x)
+(md::MarkovMapDerivative)(x::Number) = mapD(md.m,x)
 Base.ctranspose(b::AbstractMarkovMap) = MarkovMapDerivative(b)
 
 

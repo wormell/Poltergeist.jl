@@ -64,7 +64,7 @@ K = SolutionInv(lan);
 @test_approx_eq sigmasq_A 0.360109486199160672898824
 
 # Correlation sums
-println("Correlation sums 📒")
+println("Correlation sums")
 A1 = Fun(x->sin(sin(2pi*x)),d1)
 A2 = Fun(x->sin(sin(2pi*x)),d2)
 cs1f = correlationsum(M1f,A1)
@@ -87,7 +87,7 @@ pts = points(space(ρ2bi),100)
 @test maxabs(ρ2bi.(pts) - ρ2b.(pts)/normi) < 200eps(1.)
 
 # Time series
-println("Time series tests ⏳⏳⏳")
+println("Time series tests")
 NI = 10^6; NB = 10^3
 @time ts = timeseries(M1f,NI,ρ1f)
 println("Should be ≤4s")
@@ -129,4 +129,5 @@ standardmap = MarkovMap([binv],dom,dom)
 L_standard = Transfer(standardmap)
 ApproxFun.resizedata!(L_standard,:,2)
 
-println("😎😎😎")
+println("")
+println("😎")
