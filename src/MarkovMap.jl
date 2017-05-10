@@ -38,12 +38,12 @@ function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran=coveringsegment(ds)
           diff=[autodiff(fs[i],(dir==Forward ? ds[i] : ran)) for i in eachindex(fs)])
   @assert length(fs) == length(ds)
   randm=Domain(ran)
-  @compat MarkovMap([branch(fs[i],Domain(ds[i]),randm,diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
+  MarkovMap([branch(fs[i],Domain(ds[i]),randm,diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
         coveringsegment(ds),Domain(ran))
 end
 
-@compat (m::MarkovMap)(i::Integer,x) = (m.branches[i])(x)
-@compat (m::MarkovMap)(x) = (m.branches[getbranch(m,x)])(x)
+(m::MarkovMap)(i::Integer,x) = (m.branches[i])(x)
+(m::MarkovMap)(x) = (m.branches[getbranch(m,x)])(x)
 for FUN in (:mapD,:mapP)
  @eval $FUN(m::MarkovMap,x) = $FUN(m.branches[getbranch(m,x)],x)
 end
@@ -93,7 +93,7 @@ type Offset{F,T}
   f::F
   offset::T
 end
-@compat (of::Offset)(x) = of.f(x)-of.offset
+(of::Offset)(x) = of.f(x)-of.offset
 
 function modulomap{ff}(f::ff,dom,ran=dom;diff=autodiff(f,dom))
   domd = Domain(dom); randm = Domain(ran)
@@ -146,9 +146,9 @@ function FwdCircleMap{ff,gg}(f::ff,dom,ran,dfdx::gg=autodiff(f,dom))
   FwdCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(domd)}(f,domd,randm,dfdx)
 end
 
-@compat (m::FwdCircleMap)(x) = mod(m.f(x),m.rangedomain)
+(m::FwdCircleMap)(x) = mod(m.f(x),m.rangedomain)
 mapD(m::FwdCircleMap,x) = m.dfdx(x)
-@compat mapP(m::FwdCircleMap,x) = (m(x),m.dfdx(x))
+mapP(m::FwdCircleMap,x) = (m(x),m.dfdx(x))
 
 mapinv(m::FwdCircleMap,i::Integer,y) = mod(domain_newton(m.f,m.dfdx,interval_mod(y+i*arclength(m.rangedomain),m.fa,m.fb),
     m.domain),m.domain)
@@ -191,10 +191,10 @@ function RevCircleMap{ff,gg}(v::ff,dom,ran=dom,dvdx::gg=autodiff(v,ran))
 end
 
 mapL(m::RevCircleMap,x) = domain_newton(m.v,m.dvdx,interval_mod(x,m.va,m.vb),m.rangedomain)
-@compat (m::RevCircleMap)(x) = mod(mapL(m,x),m.domain)
-@compat mapD(m::RevCircleMap,x) = inv(m.dvdx(mapL(m,x)))
+(m::RevCircleMap)(x) = mod(mapL(m,x),m.domain)
+mapD(m::RevCircleMap,x) = inv(m.dvdx(mapL(m,x)))
 function mapP(m::RevCircleMap,x)
-  @compat y = mapL(m,x)
+  y = mapL(m,x)
   (interval_mod(y,m.domain),inv(m.dvdx(y)))
 end
 
@@ -274,7 +274,7 @@ function mapP(m::InducedMarkovMap,x)
   end
   y
 end
-@compat (m::InducedMarkovMap)(x) = mapP(m,x)[1]
+(m::InducedMarkovMap)(x) = mapP(m,x)[1]
 mapD(m::InducedMarkovMap,x) = mapP(m,x)[2]
 
 

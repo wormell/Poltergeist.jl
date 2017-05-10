@@ -150,13 +150,13 @@ end
 type FunctionDerivative{ff<:Function}
   f::ff
 end
-@compat (fd::FunctionDerivative)(x) = oftype(x,dualpart(fd.f(Dual(x,one(x)))))
+(fd::FunctionDerivative)(x) = oftype(x,dualpart(fd.f(Dual(x,one(x)))))
 
 type BasisFun{S<:Space,II<:Integer}
   s::S
   k::II
 end
-@compat (b::BasisFun)(x) = getbasisfun(x,sk,eltype(sk.s))
+(b::BasisFun)(x) = getbasisfun(x,sk,eltype(sk.s))
 getbasisfun(x,sk::BasisFun,T) = Fun(sk.s,[zeros(T,sk.k-1);one(T)])(x)
 getbasisfun_int(x,sk::BasisFun,T) = cumsum(Fun(sk.s,[zeros(T,sk.k-1);one(T)]))(x)
 
@@ -182,7 +182,7 @@ getbasisfun_int{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K},T) = chebyTk_int(x,
 
 function getbasisfun{F<:TensorSpace,K<:Integer}(x,sk::BasisFun{F,K},T)
   ks = ApproxFun.tensorizer(sk.s)[sk.k]
-  @compat prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i]),T) for i = eachindex(sk.s.spaces))
+  prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i]),T) for i = eachindex(sk.s.spaces))
 end
 # no getbasisfun_int as you don't have antiderivatives
 
