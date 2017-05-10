@@ -1,7 +1,7 @@
 # Pkg.installed()["ApproxFun"] != v"0.4.0+" && Pkg.checkout("ApproxFun","4bcc8f585361184342bb21780cc6be9893d99ce6")
 
 using Poltergeist
-using Base.Test, Compat
+using Base.Test
 using ApproxFun
 
 f1(x)=2x+sin(2pi*x)/8pi; f2(x)=2x+sin(2pi*x)/8pi-1
