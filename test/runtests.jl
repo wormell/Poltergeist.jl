@@ -73,8 +73,8 @@ cs1f = correlationsum(M1f,A1)
 # Calling
 println("Calling MarkovMaps ☏")
 test_pts = rand(d2,20)
-@compat @test_approx_eq M2b.(test_pts) M1b.(test_pts)
-@compat @test_approx_eq M2b'.(test_pts) M1b'.(test_pts)
+ @test_approx_eq M2b.(test_pts) M1b.(test_pts)
+ @test_approx_eq M2b'.(test_pts) M1b'.(test_pts)
 
 #Inducing
 println("Inducing tests 🐴")
@@ -83,7 +83,7 @@ M2bi = induce(M2bd,1)
 # acim(M2bi)
 @time ρ2bi = acim(M2bi); println("Should be ≤4s")
 pts = points(space(ρ2bi),100)
-@compat normi = diff(cumsum(ρ2b).(∂(domain(M2bi))))[1]
+ normi = diff(cumsum(ρ2b).(∂(domain(M2bi))))[1]
 @test maxabs(ρ2bi.(pts) - ρ2b.(pts)/normi) < 200eps(1.)
 
 # Time series
