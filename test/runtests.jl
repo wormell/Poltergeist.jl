@@ -23,7 +23,7 @@ acim(M1f)
 println("Should all be ≤0.3s")
 
 # Non-periodic domain
-println("Chebyshev tests 🌚🌞")
+println("Chebyshev tests 🌞🌚")
 d2 = Segment(0..1.)
 @test Poltergeist.coveringsegment([0..0.5,0.5..1]) == d2
 M2b = MarkovMap([fv1,fv2],[0..0.5,0.5..1],dir=Reverse,diff=[fv1d,fv2d]);
@@ -48,7 +48,7 @@ pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
 # @test transfer(M1f,x->Fun(Fourier(d1),[0.,1.])(x),0.28531) == Poltergeist.transferfunction(0.28531,M1f,Poltergeist.BasisFun(Fourier(d1),2),Float64)
 # @test_approx_eq transfer(M2f,exp,0.28531) (Transfer(M2f)*Fun(exp,Space(d2)))(0.28531)
 
-println("Lanford test ⚖")
+println("Lanford map test")
 lan_lift(x) = 5x/2 - x^2/2
 lan = modulomap(lan_lift,0..1);
 K = SolutionInv(lan);
@@ -64,17 +64,19 @@ K = SolutionInv(lan);
 @test_approx_eq sigmasq_A 0.360109486199160672898824
 
 # Correlation sums
-println("Correlation sums")
+println("Correlation sum test")
 A1 = Fun(x->sin(sin(2pi*x)),d1)
 A2 = Fun(x->sin(sin(2pi*x)),d2)
 cs1f = correlationsum(M1f,A1)
 @test maxabs(cs1f.(pts)-correlationsum(M2f,A2).(pts)) .< 2000eps(1.)
 
 # Calling
-println("Calling MarkovMaps ☏")
-test_pts = rand(d2,20)
- @test_approx_eq M2b.(test_pts) M1b.(test_pts)
- @test_approx_eq M2b'.(test_pts) M1b'.(test_pts)
+println("Newton's method test ☏")
+test_f = linspace(d2.a,d2.b,20)[1:end-1] # map boundaries are dodgy because multivalued
+test_x = Poltergeist.mapinv(M2b,1,test_f)
+ @test_approx_eq M2b.(test_x) test_f
+ @test_approx_eq M1b.(test_x) test_f
+ @test_approx_eq M2b'.(test_x) M1b'.(test_x)
 
 #Inducing
 println("Inducing tests 🐴")
@@ -118,7 +120,7 @@ println("Should be ≤27s")
 # end
 
 # 2D tests - in testing
-println("2D tests 🖥")
+println("2D tests")
 using StaticArrays
 standardmap_inv_lift(x::SVector) = SVector(x[1] - 0.1*sin(x[2] - x[1]),x[2]-x[1]);
 standardmap_inv_diff(x::SVector) = SMatrix{2,2}(1,0,0,1); # As only determinant is important...

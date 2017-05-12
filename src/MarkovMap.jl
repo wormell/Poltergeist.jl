@@ -146,11 +146,11 @@ function FwdCircleMap{ff,gg}(f::ff,dom,ran,dfdx::gg=autodiff(f,dom))
   FwdCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(domd)}(f,domd,randm,dfdx)
 end
 
-(m::FwdCircleMap)(x) = mod(m.f(x),m.rangedomain)
+(m::FwdCircleMap)(x) = domain_mod(m.f(x),m.rangedomain)
 mapD(m::FwdCircleMap,x) = m.dfdx(x)
 mapP(m::FwdCircleMap,x) = (m(x),m.dfdx(x))
 
-mapinv(m::FwdCircleMap,i::Integer,y) = mod(domain_newton(m.f,m.dfdx,interval_mod(y+i*arclength(m.rangedomain),m.fa,m.fb),
+mapinv(m::FwdCircleMap,i::Integer,y) = domain_mod(domain_newton(m.f,m.dfdx,interval_mod(y+i*arclength(m.rangedomain),m.fa,m.fb),
     m.domain),m.domain)
 mapinvD(m::FwdCircleMap,i::Integer,y) = m.dfdx(mapinv(m,i,y))
 function mapinvP(m::FwdCircleMap,i::Integer,y)
@@ -191,7 +191,7 @@ function RevCircleMap{ff,gg}(v::ff,dom,ran=dom,dvdx::gg=autodiff(v,ran))
 end
 
 mapL(m::RevCircleMap,x) = domain_newton(m.v,m.dvdx,interval_mod(x,m.va,m.vb),m.rangedomain)
-(m::RevCircleMap)(x) = mod(mapL(m,x),m.domain)
+(m::RevCircleMap)(x) = domain_mod(mapL(m,x),m.domain)
 mapD(m::RevCircleMap,x) = inv(m.dvdx(mapL(m,x)))
 function mapP(m::RevCircleMap,x)
   y = mapL(m,x)

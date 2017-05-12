@@ -42,7 +42,7 @@ Base.zero(p::InterpolationNode) = zero(eltype(p))
 # Circle domains
 
 interval_mod(x,a,b) = (b-a)*mod((x-a)/(b-a),1)+a
-mod(x,p::PeriodicInterval) = interval_mod(x,p.a,p.b)
+domain_mod(x,p::PeriodicInterval) = interval_mod(x,p.a,p.b)
 
 # Newton's method
 
