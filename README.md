@@ -15,19 +15,23 @@ As an example, take your favourite Markov interval map and give it digital form:
 using Poltergeist, ApproxFun
 d = Segment(0,1)
 fv = [x->2x+sin(2pi*x)/8,x->2-2x]
-M = MarkovMap(fv,d)
-M(0.25), M'(0.25)
+f = MarkovMap(fv,d)
+f(0.25), f'(0.25)
 ```
 <!---want to plot Markov Map--->
 
-Similarly, take a circle map:
+Similarly, take a circle map, or maps defined by modulo or inverse:
 
 ```julia
-f_lift(x) = 4x + sin(2pi*x)/2pi
-C = CircleMap(f_lift,PeriodicInterval(0,1))
+c_lift(x) = 4x + sin(2pi*x)/2pi
+c = CircleMap(c_lift,PeriodicInterval(0,1))
+
+lanford = modulomap(x->2x+x*(1-x)/2,0..1)
+doubling = MarkovMap([x->x/2,x->(x+1)/2],0..1,dir=Reverse)
+
 ```
 
-Calling ```Transfer``` on a ```MarkovMap``` automatically creates an ApproxFun ```Operator```, which can do (numerically) all the kinds of things one expects from linear operators on function spaces:
+Calling ```Transfer``` on an ```AbstractMarkovMap``` type automatically creates an ApproxFun ```Operator```, which can do (numerically) all the kinds of things one expects from linear operators on function spaces:
 
 ```julia
 L = Transfer(M)
@@ -35,10 +39,10 @@ f0 = Fun(x->sin(3pi*x),d) #ApproxFun function
 f1 = L*f0
 g = ((2I-L)\f0)'
 eigvals(L,30)
-det(I-1.3L)
+det(I-4L) # Fredholm determinant
 ``` 
 
-In particular, it can solve for many statistical properties, which Poltergeist has built-in commands for. Most of these commands allow you to use the ```MarkovMap``` directly (bad, zero caching between uses), transfer operator (good), or the ```SolutionInv``` object (best, so cache).
+In particular, you can solve for many statistical properties, many of which Poltergeist has built-in commands for. Most of these commands allow you to use the ```MarkovMap``` directly (bad, zero caching between uses), transfer operator (good), or the ```SolutionInv``` operator (so cache).
 
 ```julia
 K = SolutionInv(L)
@@ -59,9 +63,10 @@ plot(ρ)
 This package is based on academic work. If you find this package useful in your work, please kindly cite as appropriate:
 
 * J. P. Wormell (2017), Spectral collocation methods for transfer operators in uniformly expanding dynamics (preprint)
+* S. Olver & A. Townsend (2014), A practical framework for infinite-dimensional linear algebra, Proceedings of the 1st First Workshop for High Performance Technical Computing in Dynamic Languages, 57–62
+
 
 <!---
-* S. Olver & A. Townsend (2014), A practical framework for infinite-dimensional linear algebra, Proceedings of the 1st First Workshop for High Performance Technical Computing in Dynamic Languages, 57–62
 * J. P. Wormell (2017 in preparation), Fast numerical methods for intermittent systems 
 
 
