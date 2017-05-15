@@ -23,15 +23,17 @@ f(0.25), f'(0.25)
 Similarly, take a circle map, or maps defined by modulo or inverse:
 
 ```julia
-c_lift(x) = 4x + sin(2pi*x)/2pi
-c = CircleMap(c_lift,PeriodicInterval(0,1))
-
+c = CircleMap(x->4x + sin(2pi*x)/2pi,PeriodicInterval(0,1))
 lanford = modulomap(x->2x+x*(1-x)/2,0..1)
 doubling = MarkovMap([x->x/2,x->(x+1)/2],0..1,dir=Reverse)
-
 ```
 
-Calling ```Transfer``` on an ```AbstractMarkovMap``` type automatically creates an ApproxFun ```Operator```, which can do (numerically) all the kinds of things one expects from linear operators on function spaces:
+<!---For better performance, use generic (vs anonymous) functions and (if using a complicated function) supply a derivative:
+```julia
+complicatedfun(x) = 3x+sum(2^(-33/8)m)
+--->
+
+Calling ```Transfer``` on an ```AbstractMarkovMap``` type automatically creates an ApproxFun ```Operator```, with which you can do (numerically) all the kinds of things one expects from linear operators on function spaces:
 
 ```julia
 L = Transfer(M)
@@ -42,7 +44,7 @@ eigvals(L,30)
 det(I-4L) # Fredholm determinant
 ``` 
 
-In particular, you can solve for many statistical properties, many of which Poltergeist has built-in commands for. Most of these commands allow you to use the ```MarkovMap``` directly (bad, zero caching between uses), transfer operator (good), or the ```SolutionInv``` operator (so cache).
+In particular, you can solve for many statistical properties, many of which Poltergeist has built-in commands for. Most of these commands allow you to use the ```MarkovMap``` directly (bad, zero caching between uses), transfer operator (caches transfer operator entries, usually the slowest step), or the ```SolutionInv``` operator (caches QR factorisation as well).
 
 ```julia
 K = SolutionInv(L)
@@ -50,19 +52,19 @@ K = SolutionInv(L)
 @test ρ == K\Fun(one,d)
 birkhoffvar(K,Fun(x->x^2,d))
 birkhoffcov(K,Fun(x->x^2,d),Fun(identity,d))
-linearresponse(K,Fun(sinpi,d))
+dρ = linearresponse(K,Fun(sinpi,d))
 
 using Plots
 plot(ρ)
 ```
-<!--- plot!(linearresponse(L,Fun(x->x*(1-x),d))) --->
+<!--- TODO: plot!(linearresponse(L,Fun(x->x*(1-x),d))) --->
 <img src=https://github.com/johnwormell/Poltergeist.jl/raw/master/images/acim.png width=500 height=400>
 
 ## Publications
 
 This package is based on academic work. If you find this package useful in your work, please kindly cite as appropriate:
 
-* J. P. Wormell (2017), Spectral collocation methods for transfer operators in uniformly expanding dynamics (preprint)
+* J. P. Wormell (2017), Spectral Galerkin methods for transfer operators in uniformly expanding dynamics ([preprint](https://arxiv.org/abs/1705.04431))
 * S. Olver & A. Townsend (2014), A practical framework for infinite-dimensional linear algebra, Proceedings of the 1st First Workshop for High Performance Technical Computing in Dynamic Languages, 57–62
 
 
