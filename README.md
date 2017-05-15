@@ -65,7 +65,8 @@ plot(ρ)
 This package is based on academic work. If you find this package useful in your work, please kindly cite as appropriate:
 
 * J. P. Wormell (2017), Spectral Galerkin methods for transfer operators in uniformly expanding dynamics ([preprint](https://arxiv.org/abs/1705.04431))
-* S. Olver & A. Townsend (2014), A practical framework for infinite-dimensional linear algebra, Proceedings of the 1st First Workshop for High Performance Technical Computing in Dynamic Languages, 57–62
+<!---* *features of ApproxFun*: S. Olver & A. Townsend (2014), A practical framework for infinite-dimensional linear algebra, Proceedings of the 1st First Workshop for High Performance Technical Computing in Dynamic Languages, 57–62 ([article](https://doi.org/10.1109/HPTCDL.2014.10), [preprint](https://arxiv.org/abs/1409.5529)) --->
+* Literature [on ApproxFun](https://github.com/JuliaApproximation/ApproxFun.jl#references).
 
 
 <!---
