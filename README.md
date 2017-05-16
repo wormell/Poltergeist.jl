@@ -14,8 +14,8 @@ As an example, take your favourite Markov interval map and give it digital form:
 ```julia
 using Poltergeist, ApproxFun
 d = Segment(0,1)
-fv = [x->2x+sin(2pi*x)/8,x->2-2x]
-f = MarkovMap(fv,d)
+f1 = 2x+sin(2pi*x)/8; f2(x) = 2-2x
+f = MarkovMap([f1,f2],[0..0.5,0.5..1])
 f(0.25), f'(0.25)
 ```
 <!---want to plot Markov Map--->
@@ -55,10 +55,14 @@ birkhoffcov(K,Fun(x->x^2,d),Fun(identity,d))
 dρ = linearresponse(K,Fun(sinpi,d))
 
 using Plots
-plot(ρ)
+plot(ρ,label="ρ")
+ε = 0.05
+plot!(ρ + ε*dρ)
+pertε(x) = x + ε*sinpi(x)
+plot!(acim(MarkovMap([pertε∘f1,pertε∘f2],[0..0.5,0.5..1])))
 ```
 <!--- TODO: plot!(linearresponse(L,Fun(x->x*(1-x),d))) --->
-<img src=https://github.com/johnwormell/Poltergeist.jl/raw/master/images/acim.png width=500 height=400>
+<img src=https://github.com/johnwormell/Poltergeist.jl/raw/master/images/acim.pdf width=500 height=400>
 
 ## Publications
 
