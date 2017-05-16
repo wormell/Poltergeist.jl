@@ -55,7 +55,7 @@ birkhoffcov(K,Fun(x->x^2,d),Fun(identity,d))
 dρ = linearresponse(K,Fun(sinpi,d))
 
 using Plots
-plot(ρ,label="ρ")
+plot(ρ)
 ε = 0.05
 plot!(ρ + ε*dρ)
 pertε(x) = x + ε*sinpi(x)
