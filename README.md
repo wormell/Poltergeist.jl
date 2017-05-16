@@ -62,7 +62,7 @@ pertε(f) = x-> f(x) + ε*sinpi(f(x))
 plot!(acim(MarkovMap([pertε(f1),pertε(f2)],[0..0.5,0.5..1])))
 ```
 <!--- TODO: plot!(linearresponse(L,Fun(x->x*(1-x),d))) --->
-<img src=https://github.com/johnwormell/Poltergeist.jl/raw/master/images/acim.pdf width=500>
+<img src=https://github.com/johnwormell/Poltergeist.jl/raw/master/images/acim.png width=500>
 
 ## Publications
 
