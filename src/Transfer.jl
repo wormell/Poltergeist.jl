@@ -6,7 +6,7 @@ ApproxFun.israggedbelow(L::AbstractTransfer) = true
 #Base.issymmetric(L::AbstractTransfer) = false
 
 #for OP in (:(ApproxFun.domain),:rangedomain)
-#    @eval $OP(L::AbstractTransfer) = $OP(getmap(L))
+#    @eval $OP(L::AbstractTransfer) = $OP(markovmap(L))
 #end
 
 immutable ConcreteTransfer{T,D<:Space,R<:Space,M<:AbstractMarkovMap} <: AbstractTransfer{T}
@@ -43,7 +43,8 @@ function Base.convert{T}(::Type{Operator{T}},D::ConcreteTransfer)
 end
 
 
-getmap(L::ConcreteTransfer) = L.m
+markovmap(L::ConcreteTransfer) = L.m
+markovmap(L::CachedOperator) = markovmap(L.op)
 
 function resizecolstops!(L::ConcreteTransfer,n)
   colstopslength = length(L.colstops)
@@ -154,13 +155,13 @@ transfer(m::MarkovMap,fn,x) = transferfunction(x,m,fn,eltype(rangedomain(m)))
 # Indexing
 
 transferfunction_nodes{TT,D,R,M<:AbstractMarkovMap}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
-  T[transferfunction(p,getmap(L),BasisFun(domainspace(L),kk),T) for p in points(rangespace(L),n)]
+  T[transferfunction(p,markovmap(L),BasisFun(domainspace(L),kk),T) for p in points(rangespace(L),n)]
 # transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
-#   T[transferfunction(InterpolationNode(rangespace(getmap(L)),k,n),getmap(L),BasisFun(domainspace(L),kk),T) for k = 1:n]
+#   T[transferfunction(InterpolationNode(rangespace(markovmap(L)),k,n),markovmap(L),BasisFun(domainspace(L),kk),T) for k = 1:n]
 
 
 function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range,padding::Bool=false)
-  #T = eltype(getmap(L))
+  #T = eltype(markovmap(L))
   dat = Array(T,0)
   cols = Array(eltype(k),Base.length(k)+1)
   cols[1] = 1
@@ -193,7 +194,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       # ( the difference is we start at n \approx mc )
 
       r=ApproxFun.checkpoints(rs)
-      fr=[transferfunction(rr,getmap(L),BasisFun(domainspace(L),kk),T) for rr in r]
+      fr=[transferfunction(rr,markovmap(L),BasisFun(domainspace(L),kk),T) for rr in r]
       maxabsfr=norm(fr,Inf)
 
       logn = min(round(Int,log2(max(mc,16)),RoundUp),20)

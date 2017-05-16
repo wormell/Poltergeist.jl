@@ -57,10 +57,12 @@ l_exp = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
 sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1))
 K = SolutionInv(lan);
 @time rho = acim(K);
-@time l_exp = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
+@time l_exp = lyapunov(K)
+@time l_exp2 = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
 @time sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1))
 
 @test_approx_eq l_exp 0.657661780006597677541582
+@test_approx_eq l_exp2 0.657661780006597677541582
 @test_approx_eq sigmasq_A 0.360109486199160672898824
 
 # Correlation sums

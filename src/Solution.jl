@@ -37,6 +37,9 @@ function SolutionInv(L::Operator,u::Fun=uniform(domainspace(L)))
 end
 SolutionInv(M::MarkovMap,u::Fun=uniform(Space(domain(M)))) = SolutionInv(Transfer(M,space(u)),u)
 
+Transfer(K::SolutionInvWrapper) = K.op.R.op.ops[2].op # eek??
+
+
 
 # function DefiniteIntegral(sp::ProductSpace) # likely a hack
 #   di = DefiniteIntegral(sp.spaces[1])
