@@ -25,7 +25,7 @@ Similarly, take a circle map, or maps defined by modulo or inverse:
 ```julia
 c = CircleMap(x->4x + sin(2pi*x)/2pi,PeriodicInterval(0,1))
 lanford = modulomap(x->2x+x*(1-x)/2,0..1)
-doubling = MarkovMap([x->x/2,x->(x+1)/2],0..1,dir=Reverse)
+doubling = MarkovMap([x->x/2,x->(x+1)/2],[0..0.5,0.5..1],dir=Reverse)
 ```
 
 <!---For better performance, use generic (vs anonymous) functions and (if using a complicated function) supply a derivative:
@@ -58,11 +58,11 @@ using Plots
 plot(ρ)
 ε = 0.05
 plot!(ρ + ε*dρ)
-pertε(x) = x + ε*sinpi(x)
-plot!(acim(MarkovMap([pertε∘f1,pertε∘f2],[0..0.5,0.5..1])))
+pertε(f) = x-> f(x) + ε*sinpi(f(x))
+plot!(acim(MarkovMap([pertε(f1),pertε(f2)],[0..0.5,0.5..1])))
 ```
 <!--- TODO: plot!(linearresponse(L,Fun(x->x*(1-x),d))) --->
-<img src=https://github.com/johnwormell/Poltergeist.jl/raw/master/images/acim.pdf width=500 height=400>
+<img src=https://github.com/johnwormell/Poltergeist.jl/raw/master/images/acim.pdf width=500>
 
 ## Publications
 
