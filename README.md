@@ -57,8 +57,8 @@ dρ = linearresponse(K,Fun(sinpi,d))
 using Plots
 plot(ρ)
 ε = 0.05
-plot!(ρ + ε*dρ)
-pertε(f) = x-> f(x) + ε*sinpi(f(x))
+plot!(ρ + ε*dρ,title="Linear response")
+pertε(func) = x-> func(x) + ε*sinpi(func(x))
 plot!(acim(MarkovMap([pertε(f1),pertε(f2)],[0..0.5,0.5..1])))
 ```
 <!--- TODO: plot!(linearresponse(L,Fun(x->x*(1-x),d))) --->
