@@ -1,7 +1,7 @@
 # MarkovMaps
 export MarkovMap, branch, nbranches, modulomap, induce, CircleMap
 
-abstract AbstractMarkovMap{D<:Domain,R<:Domain}# <: Function
+abstract AbstractMarkovMap{D<:Domain,R<:Domain} end# <: Function
 #abstract AbstractDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: AbstractMarkovMap{D,R,T,FF}
 
 Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(domain(m))*"↦"*string(rangedomain(m)) #branches??
@@ -13,7 +13,7 @@ immutable MarkovMap{D<:Domain,R<:Domain,B<:MarkovBranch} <: AbstractMarkovMap{D,
   branches::AbstractVector{B}
   domain::D
   rangedomain::R
-  function MarkovMap(branches,dom,ran)
+  @compat function MarkovMap(branches,dom,ran)
     domd = Domain(dom); randm = Domain(ran)
     @assert all(b->issubset(b.domain,domd),branches)
     @assert all(b->(b.rangedomain == randm),branches)
@@ -132,7 +132,7 @@ immutable InducedMarkovMap{M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} <: 
   b::B
   domain::D
   rangedomain::R
-  function InducedMarkovMap(m,b,dom,ran) #requires m,b: their domains -> m ∪ b
+  @compat function InducedMarkovMap(m,b,dom,ran) #requires m,b: their domains -> m ∪ b
     @assert dom == ran
     @assert domain(m) == dom
     @assert rangedomain(b) == rangedomain(m)

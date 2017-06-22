@@ -1,6 +1,6 @@
 export Transfer, transfer#, colstop, resizedata!
 
-abstract AbstractTransfer{T} <: Operator{T}
+@compat abstract type AbstractTransfer{T} <: Operator{T} end
 
 ApproxFun.israggedbelow(L::AbstractTransfer) = true
 #Base.issymmetric(L::AbstractTransfer) = false

@@ -1,6 +1,6 @@
 # CircleMaps
 
-abstract AbstractCircleMap{D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
+@compat abstract type AbstractCircleMap{D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
 
 immutable FwdCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
   f::ff
@@ -11,7 +11,7 @@ immutable FwdCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
   fa::T
   fb::T
 
-  function FwdCircleMap(f,domd,randm,dfdx)
+  @compat function FwdCircleMap(f,domd,randm,dfdx)
     # @assert isempty(∂(randm)) isempty(∂(domd))
     fa = f(first(domd)); fb = f(last(domd))
     cover_est = (fb-fa)/arclength(randm)
@@ -47,7 +47,7 @@ immutable RevCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
   va::T
   vb::T
 
-  function RevCircleMap(v,domd,randm,dvdx)
+  @compat function RevCircleMap(v,domd,randm,dvdx)
 
     # @assert isempty(∂(ran)) isempty(∂(dom))
     ra = first(randm); va = v(ra)
