@@ -1,6 +1,6 @@
 # CircleMaps
 
-@compat abstract type AbstractCircleMap{D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
+@compat abstract type AbstractCircleMap{D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R} end
 
 immutable FwdCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
   f::ff
