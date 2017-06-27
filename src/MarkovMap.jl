@@ -1,7 +1,7 @@
 # MarkovMaps
 export MarkovMap, branch, nbranches, modulomap, induce, CircleMap
 
-abstract AbstractMarkovMap{D<:Domain,R<:Domain} end# <: Function
+abstract type AbstractMarkovMap{D<:Domain,R<:Domain} end# <: Function
 #abstract AbstractDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: AbstractMarkovMap{D,R,T,FF}
 
 Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(domain(m))*"↦"*string(rangedomain(m)) #branches??
