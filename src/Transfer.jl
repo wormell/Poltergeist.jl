@@ -162,8 +162,8 @@ transferfunction_nodes{TT,D,R,M<:AbstractMarkovMap}(L::ConcreteTransfer{TT,D,R,M
 
 function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range,padding::Bool=false)
   #T = eltype(markovmap(L))
-  dat = Array(T,0)
-  cols = Array(eltype(k),Base.length(k)+1)
+  dat = Array{T}(0)
+  cols = Array{eltype(k)}(Base.length(k)+1)
   cols[1] = 1
   K = isfinite(jdat[3]) ? length(jdat[1]:jdat[2]:jdat[3]) : 0 # largest colstop
   padding && start(k) > 1 && (K = max(maximum([colstop(L,i) for i =1:start(k)-1]),K))
@@ -179,8 +179,10 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
     tol =T==Any?200eps():200eps(T)
 
     if L.colstops[kk] >= 1
+      # println(rs)
+      # println(transferfunction_nodes(L,2^max(4,nextpow2(L.colstops[kk])),kk,T))
       coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^max(4,nextpow2(L.colstops[kk])),kk,T))
-      maxabsc = max(maxabs(coeffs),one(T))
+      maxabsc = max(maximum(abs.(coeffs)),one(T))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs))/10)
     elseif L.colstops[kk]  == 0
       coeffs = [0.]
@@ -201,7 +203,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       while logn < 21
         coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
 
-        maxabsc = max(one(T),maxabs(coeffs))
+        maxabsc = max(one(T),maximum(abs.(coeffs)))
         if maxabsc == 0 && maxabsfr == 0
           coeffs = [0.]
           break
@@ -209,7 +211,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
           maxabsfr = max(maxabsfr,one(T))
           b = ApproxFun.block(rs,length(coeffs))
           bs = ApproxFun.blockstart(rs,max(div(2b,3),1))
-          if length(coeffs) > 8 && maxabs(coeffs[bs:end]) < tol*maxabsc*logn &&
+          if length(coeffs) > 8 && maximum(abs.(coeffs[bs:end])) < tol*maxabsc*logn &&
               all(kkk->norm(Fun(rs,coeffs)(r[kkk])-fr[kkk],1)<tol*length(coeffs)*maxabsfr*1000,1:length(r))
             chop!(coeffs,tol*maxabsc*logn/10)
             break
@@ -227,10 +229,10 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
 
     #    tol = 4ceil(log2(length(tk.coefficients)))*eps(T) # 4 is dummy should be like 1 in Fourier, 2C+1 in Cheby
     #    chop!(tk,tol)
-    maxabsc = maxabs(coeffs)
     lcfc = length(coeffs)
+    maxabsc = lcfc > 0 ? maximum(abs.(coeffs)) : zero(eltype(coeffs))
 
-    for i = 1:lcfc
+    for i = 1:lcfc # set small enough coefficients (in middle of vector) to zero
       abs(coeffs[i])<tol*maxabsc*log2(lcfc)/10 && (coeffs[i] = 0)
     end
 
@@ -254,10 +256,9 @@ Base.getindex(L::ConcreteTransfer,j::Integer,k::Integer) = Base.getindex(L,j:j,k
 Base.getindex(L::ConcreteTransfer,j::Integer,k::Range) = Base.getindex(L,j:j,k).data
 Base.getindex(L::ConcreteTransfer,j::Range,k::Integer) = Base.getindex(L,j,k:k).data
 
-function ApproxFun.default_raggedmatrix{T,LL<:AbstractTransfer,R1<:Union{Range,ApproxFun.AbstractCount},R2<:Range}(
-    S::ApproxFun.SubOperator{T,LL,Tuple{R1,R2}})
+Base.convert(::Type{RaggedMatrix},S::ApproxFun.SubOperator{T,LL,Tuple{R1,R2}}) where
+        {T,LL<:AbstractTransfer,R1<:Union{Range,ApproxFun.AbstractCount},R2<:Range} =
   Base.getindex(parent(S),parentindexes(S)[1],parentindexes(S)[2])
-end
 
 
 

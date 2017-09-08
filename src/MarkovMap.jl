@@ -1,7 +1,7 @@
 # MarkovMaps
 export MarkovMap, branch, nbranches, modulomap, induce, CircleMap
 
-abstract type AbstractMarkovMap{D<:Domain,R<:Domain} end# <: Function
+@compat abstract type AbstractMarkovMap{D<:Domain,R<:Domain} end# <: Function
 #abstract AbstractDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: AbstractMarkovMap{D,R,T,FF}
 
 Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(domain(m))*"↦"*string(rangedomain(m)) #branches??
@@ -13,19 +13,21 @@ immutable MarkovMap{D<:Domain,R<:Domain,B<:MarkovBranch} <: AbstractMarkovMap{D,
   branches::AbstractVector{B}
   domain::D
   rangedomain::R
-  @compat function MarkovMap(branches,dom,ran)
-    domd = Domain(dom); randm = Domain(ran)
-    @assert all(b->issubset(b.domain,domd),branches)
-    @assert all(b->(b.rangedomain == randm),branches)
+  @compat function MarkovMap{D,R,B}(branches::AbstractVector{B},dom::D,ran::R) where
+          {B<:MarkovBranch, D<:Domain, R<:Domain}
+    @assert all(b->issubset(b.domain,dom),branches)
+    @assert all(b->(b.rangedomain == ran),branches)
     # for i = 1:length(branches)
     #   for j = 1:i-1
     #     ~isempty(branches[i].domain ∩ branches[j].domain) && error("Overlapping domains in branches $i and $j")
     #   end
     # end
     # length(dom) == 1 && arclength(dom)/sum([arclength(b.domain) for b in branches]) < 1-200eps(eltype(dom)) && warn("Warning: possibly missing branches")
-    new{typeof(domd),typeof(randm),B}(branches,domd,randm)
+    new(branches,dom,ran)
   end
 end
+MarkovMap(branches::AbstractVector,dom,ran) = MarkovMap(branches,Domain(dom),Domain(ran))
+
 function MarkovMap{B<:MarkovBranch}(branches::AbstractVector{B},dom,ran)
   domd = Domain(dom); randm = Domain(ran)
   MarkovMap{typeof(domd),typeof(randm),B}(branches,domd,randm)
@@ -60,8 +62,8 @@ getbranch(m::MarkovMap,x) = in(x,m.domain) ? findfirst([in(x,domain(b)) for b in
 # function MarkovMap{D,R,ff}(
 #     f::AbstractVector{ff},dfdx::AbstractVector{ff},dom::D,ran::R)
 #   T = eltype(R)
-#   bl = Array(T,length(f)); bu = Array(T,length(f))
-#   tol = 10eps(maxabs([dom.a,dom.b]))
+#   bl = Array{T}(length(f)); bu = Array{T}(length(f))
+#   tol = 10eps(maximum(abs([dom.a,dom.b])))
 #   for i = 1:length(f)
 #     ba = interval_newton(f[i],dfdx[i],ran.a,dom.a,dom.b,interval_guess(x,dom,ran),tol)
 #     bb = interval_newton(f[i],dfdx[i],ran.b,dom.a,dom.b,interval_guess(x,dom,ran),tol)
@@ -106,7 +108,7 @@ function modulomap{ff}(f::ff,dom,ran=dom;diff=autodiff(f,dom))
   # @assert nb_est ≈ nb
   @assert nb != 0
 
-  breakpoints = Array(eltype(domd),NB+1)
+  breakpoints = Array{eltype(domd)}(NB+1)
   breakpoints[1] = first(domd)
 
   for i = 1:NB-1
@@ -132,7 +134,7 @@ immutable InducedMarkovMap{M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} <: 
   b::B
   domain::D
   rangedomain::R
-  @compat function InducedMarkovMap(m,b,dom,ran) #requires m,b: their domains -> m ∪ b
+  function InducedMarkovMap{M,B,D,R}(m::M,b::B,dom::D,ran::R) where {M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} #requires m,b: their domains -> m ∪ b
     @assert dom == ran
     @assert domain(m) == dom
     @assert rangedomain(b) == rangedomain(m)
@@ -206,7 +208,7 @@ end
 # length(mc::MarkovInverseCache) = length(mc.m)
 # rangespace(mc::MarkovInverseCache) = mc.sp
 # function extenddata!(m::MarkovInverseCache,n::Int)
-#   v = Array(eltype(m),length(m),n)
+#   v = Array{eltype(m)}(length(m),n)
 #   pts = points(rangespace(m),n)
 #   for k = 1:n
 #     for i = 1:length(m)

@@ -8,9 +8,9 @@ end
 
 # Overloads
 
-typealias PureLaurent{D<:Domain} Hardy{false,D}
+@compat const PureLaurent{D<:Domain} = Hardy{false,D}
 
-typealias GeneralInterval Union{Segment,PeriodicInterval}
+@compat const GeneralInterval = Union{Segment,PeriodicInterval}
 
 #ApproxFun.qrfact(A::ApproxFun.QROperator) = A
 # rem()
@@ -21,7 +21,7 @@ type InterpolationNode{S<:Space}<:Number
   sp::S
   k::Int
   n::Int
-  function InterpolationNode(sp::Space,k::Int,n::Int)
+  function InterpolationNode{S}(sp::S,k::Int,n::Int) where S<:Space
     @assert k ≥ 1
     @assert k ≤ n
     new{typeof(sp)}(sp,k,n)
@@ -188,6 +188,6 @@ end
 
 
 # # Directions
-abstract Direction
-type Forward <: Direction; end
-type Reverse <: Direction; end
+@compat abstract type Direction; end
+@compat struct Forward <: Direction; end
+@compat struct Reverse <: Direction; end

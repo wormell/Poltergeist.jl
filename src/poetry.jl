@@ -1,8 +1,8 @@
 export acim, linearresponse, correlationsum, birkhoffcov, birkhoffvar
 export lyapunov
-export ∘
+# export ∘
 
-(∘)(f,g) = x->f(g(x))
+# (∘)(f,g) = x->f(g(x))
 
 # Lanford map
 for (fn,dfn,n) in ((:lanford_v0,:lanford_dv0,25),(:lanford_v1,:lanford_dv1,17))

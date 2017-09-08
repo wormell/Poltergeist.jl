@@ -10,19 +10,18 @@ immutable FwdCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
   cover::Int
   fa::T
   fb::T
-
-  @compat function FwdCircleMap(f,domd,randm,dfdx)
-    # @assert isempty(∂(randm)) isempty(∂(domd))
-    fa = f(first(domd)); fb = f(last(domd))
-    cover_est = (fb-fa)/arclength(randm)
-    cover_integer = round(Int,cover_est)
-    cover_est ≈ cover_integer || error("Circle map lift does not have integer covering number.")
-    new(f,dfdx,domd,randm,abs(cover_integer),fa,fb)
-  end
 end
-function FwdCircleMap{ff,gg}(f::ff,dom,ran,dfdx::gg=autodiff(f,dom))
+function FwdCircleMap{D<:Domain,R<:Domain,ff,gg}(f::ff,domd::D,randm::R,dfdx::gg=autodiff(f,domd))
+  # @assert isempty(∂(randm)) isempty(∂(domd))
+  fa = f(first(domd)); fb = f(last(domd))
+  cover_est = (fb-fa)/arclength(randm)
+  cover_integer = round(Int,cover_est)
+  cover_est ≈ cover_integer || error("Circle map lift does not have integer covering number.")
+  FwdCircleMap{D,R,ff,gg,typeof(fa)}(f,dfdx,domd,randm,abs(cover_integer),fa,fb)
+end
+function FwdCircleMap{ff,gg}(f::ff,dom,ran,dfdx::gg=autodiff(f,PeriodicDomain(dom)))
   domd = PeriodicDomain(dom); randm = PeriodicDomain(ran)
-  FwdCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(domd)}(f,domd,randm,dfdx)
+  FwdCircleMap{typeof(domd),typeof(randm),ff,gg}(f,domd,randm,dfdx)
 end
 
 (m::FwdCircleMap)(x) = domain_mod(m.f(x),m.rangedomain)
@@ -46,27 +45,25 @@ immutable RevCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
   cover::Int
   va::T
   vb::T
-
-  @compat function RevCircleMap(v,domd,randm,dvdx)
-
-    # @assert isempty(∂(ran)) isempty(∂(dom))
-    ra = first(randm); va = v(ra)
-    dr = arclength(randm); dd = arclength(domd)
-    cover = 1; vr = v(ra+dr)-va
-    while (abs(vr) <= dd && cover < 10000)
-      vr = v(ra+cover*dr)-va
-      abs(vr) ≈ dd && break
-      abs(vr) > dd && error("Inverse lift doesn't appear to have an inverse")
-      cover += 1
-    end
-    cover == 10000 && error("Can't get to the end of the inverse lift after 10000 steps")
-
-    new(v,dvdx,domd,randm,cover,va,v(last(randm)))
+end
+function RevCircleMap{D<:Domain,R<:Domain,ff,gg}(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm))
+  # @assert isempty(∂(ran)) isempty(∂(dom))
+  ra = first(randm); va = v(ra)
+  dr = arclength(randm); dd = arclength(domd)
+  cover = 1; vr = v(ra+dr)-va
+  while (abs(vr) <= dd && cover < 10000)
+    vr = v(ra+cover*dr)-va
+    abs(vr) ≈ dd && break
+    abs(vr) > dd && error("Inverse lift doesn't appear to have an inverse")
+    cover += 1
   end
+  cover == 10000 && error("Can't get to the end of the inverse lift after 10000 steps")
+
+  RevCircleMap{D,R,ff,gg,typeof(va)}(v,dvdx,domd,randm,cover,va,v(last(randm)))
 end
 function RevCircleMap{ff,gg}(v::ff,dom,ran=dom,dvdx::gg=autodiff(v,ran))
   domd = PeriodicDomain(dom); randm = PeriodicDomain(ran)
-  RevCircleMap{typeof(domd),typeof(randm),ff,gg,eltype(randm)}(v,domd,randm,dvdx)
+  RevCircleMap{typeof(domd),typeof(randm),ff,gg}(v,domd,randm,dvdx)
 end
 
 mapL(m::RevCircleMap,x) = domain_newton(m.v,m.dvdx,interval_mod(x,m.va,m.vb),m.rangedomain)

@@ -2,7 +2,7 @@ export NeutralBranch
 
 # MarkovBranch
 
-abstract MarkovBranch{D<:Domain,R<:Domain}
+@compat abstract type MarkovBranch{D<:Domain,R<:Domain}; end
 
 Base.summary(b::MarkovBranch) =  string(typeof(b).name.name)*":"*string(domain(b))*"↦"*string(rangedomain(b)) #branches??
 Base.eltype(b::MarkovBranch) = eltype(rangedomain(b))
@@ -14,10 +14,10 @@ immutable FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
   domain::D
   rangedomain::R
   #  sgn::T
-  function FwdExpandingBranch(fc,dfdxc,dom,ran)
+  # function FwdExpandingBranch(fc,dfdxc,dom,ran)
     # @assert all([in(fc(p),∂(ran)) for p in ∂(dom)])
-    new(fc,dfdxc,dom,ran)
-  end
+  #   new(fc,dfdxc,dom,ran)
+  # end
 end
 function FwdExpandingBranch{D,R,ff,gg}(f::ff,dfdx::gg,dom::D,ran::R)
   domd = Domain(dom); randm = Domain(ran)
@@ -43,9 +43,9 @@ immutable RevExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
   domain::D
   rangedomain::R
   #   sgn::T
-  function RevExpandingBranch(vc,dvdxc,dom,ran)
-    new(vc,dvdxc,dom,ran)
-  end
+  # function RevExpandingBranch(vc,dvdxc,dom,ran)
+  #   new(vc,dvdxc,dom,ran)
+  # end
 end
 function RevExpandingBranch{D,R,ff,gg}(v::ff,dvdx::gg,dom::D,ran::R)
     domd = Domain(dom); randm = Domain(ran)
@@ -87,7 +87,7 @@ function autodiff_dual(f,bi)
   fd
 end
 
-typealias DomainInput Union{Domain,IntervalSets.AbstractInterval}
+@compat const DomainInput = Union{Domain,IntervalSets.AbstractInterval}
 
 function branch(f,dom,ran,diff=autodiff(f,(dir=Forward ? dom : ran));dir=Forward,
                       ftype=typeof(f),difftype=typeof(diff))

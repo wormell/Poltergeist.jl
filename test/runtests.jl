@@ -40,13 +40,13 @@ acim(M2f)
 println("Should be ≤0.12s")
 
 pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
-@test maxabs(ρ1f.(pts) - ρ2f.(pts)) < 400eps(1.)
-@test maxabs(ρ1b.(pts) - ρ2b.(pts)) < 400eps(1.)
-@test maxabs(ρ2b.(pts) - ρ2ba.(pts)) < 400eps(1.)
+@test maximum(abs.(ρ1f.(pts) - ρ2f.(pts))) < 400eps(1.)
+@test maximum(abs.(ρ1b.(pts) - ρ2b.(pts))) < 400eps(1.)
+@test maximum(abs.(ρ2b.(pts) - ρ2ba.(pts))) < 400eps(1.)
 
 # # Transfer
 # @test transfer(M1f,x->Fun(Fourier(d1),[0.,1.])(x),0.28531) == Poltergeist.transferfunction(0.28531,M1f,Poltergeist.BasisFun(Fourier(d1),2),Float64)
-# @test_approx_eq transfer(M2f,exp,0.28531) (Transfer(M2f)*Fun(exp,Space(d2)))(0.28531)
+# @test transfer(M2f,exp,0.28531) ≈ (Transfer(M2f)*Fun(exp,Space(d2)))(0.28531)
 
 println("Lanford map test")
 lan_lift(x) = 5x/2 - x^2/2
@@ -61,24 +61,24 @@ K = SolutionInv(lan);
 @time l_exp2 = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
 @time sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1))
 
-@test_approx_eq l_exp 0.657661780006597677541582
-@test_approx_eq l_exp2 0.657661780006597677541582
-@test_approx_eq sigmasq_A 0.360109486199160672898824
+@test l_exp ≈ 0.657661780006597677541582
+@test l_exp2 ≈ 0.657661780006597677541582
+@test sigmasq_A ≈ 0.360109486199160672898824
 
 # Correlation sums
 println("Correlation sum test")
 A1 = Fun(x->sin(sin(2pi*x)),d1)
 A2 = Fun(x->sin(sin(2pi*x)),d2)
 cs1f = correlationsum(M1f,A1)
-@test maxabs(cs1f.(pts)-correlationsum(M2f,A2).(pts)) .< 2000eps(1.)
+@test maximum(abs.(cs1f.(pts)-correlationsum(M2f,A2).(pts))) .< 2000eps(1.)
 
 # Calling
 println("Newton's method test ☏")
 test_f = linspace(d2.a,d2.b,20)[1:end-1] # map boundaries are dodgy because multivalued
-test_x = Poltergeist.mapinv(M2b,1,test_f)
- @test_approx_eq M2b.(test_x) test_f
- @test_approx_eq M1b.(test_x) test_f
- @test_approx_eq M2b'.(test_x) M1b'.(test_x)
+test_x = [Poltergeist.mapinv(M2b,1,tf) for tf in test_f]
+ @test M2b.(test_x) ≈ test_f
+ @test M1b.(test_x) ≈ test_f
+ @test M2b'.(test_x) ≈ M1b'.(test_x)
 
 #Inducing
 println("Inducing tests 🐴")
@@ -88,17 +88,17 @@ M2bi = induce(M2bd,1)
 @time ρ2bi = acim(M2bi); println("Should be ≤4s")
 pts = points(space(ρ2bi),100)
  normi = diff(cumsum(ρ2b).(∂(domain(M2bi))))[1]
-@test maxabs(ρ2bi.(pts) - ρ2b.(pts)/normi) < 200eps(1.)
+@test maximum(abs.(ρ2bi.(pts) - ρ2b.(pts)/normi)) < 200eps(1.)
 
 # Time series
 println("Time series tests")
 NI = 10^6; NB = 10^3
 @time ts = timeseries(M1f,NI,ρ1f)
 println("Should be ≤4s")
-@test abs(sum(sin(sin(2pi*ts)))/NI - sum(ρ1f*A1))< (4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
+@test abs(sum(sin.(sin.(2pi*ts)))/NI - sum(ρ1f*A1))< (4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
 
 @time cts = timehist(M2f,NI,NB,ρ2f)
-@test abs(sum(sin(sin(2pi*cts[1][1:end-1])).*cts[2])/NI - sum(ρ2f*A2))< 1/NB+(4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
+@test abs(sum(sin.(sin.(2pi*cts[1][1:end-1])).*cts[2])/NI - sum(ρ2f*A2))< 1/NB+(4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
 println("Should be ≤27s")
 
 #TODO: fix
