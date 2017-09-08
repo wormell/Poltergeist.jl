@@ -14,6 +14,14 @@ fv1d(x) = 1/2+cos(2pi*x)/4; fv2d = fv1d
 println("Fourier tests 🌚🌞")
 d1 = PeriodicInterval(0,1.)
 M1b = CircleMap(fv1,d1,dir="rev",diff=fv1d)
+L1b = Transfer(M1b)
+@time L1b = Transfer(M1b)
+K1b = SolutionInv(L1b)
+acim(L1b)
+@time ρ1b = acim(L1b)
+acim(K1b)
+@time ρ1b = acim(K1b)
+
 acim(M1b)
 @time ρ1b = acim(M1b)
 
@@ -23,7 +31,7 @@ acim(M1f)
 println("Should all be ≤0.3s")
 
 # Non-periodic domain
-println("Chebyshev tests 🌞🌚")
+println("Chebyshev tests 🌳")
 d2 = Segment(0..1.)
 @test Poltergeist.coveringsegment([0..0.5,0.5..1]) == d2
 M2b = MarkovMap([fv1,fv2],[0..0.5,0.5..1],dir=Reverse,diff=[fv1d,fv2d]);
@@ -93,9 +101,9 @@ pts = points(space(ρ2bi),100)
 # Time series
 println("Time series tests")
 NI = 10^6; NB = 10^3
-@time ts = timeseries(M1f,NI,ρ1f)
-println("Should be ≤4s")
-@test abs(sum(sin.(sin.(2pi*ts)))/NI - sum(ρ1f*A1))< (4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
+# @time ts = timeseries(M1f,NI,ρ1f)
+# println("Should be ≤4s")
+# @test abs(sum(sin.(sin.(2pi*ts)))/NI - sum(ρ1f*A1))< (4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
 
 @time cts = timehist(M2f,NI,NB,ρ2f)
 @test abs(sum(sin.(sin.(2pi*cts[1][1:end-1])).*cts[2])/NI - sum(ρ2f*A2))< 1/NB+(4sum(cs1f*A1)+200eps(1.))/sqrt(NI)

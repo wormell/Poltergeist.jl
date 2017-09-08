@@ -9,12 +9,12 @@ end
 
 function timeseries_init{T}(m::AbstractMarkovMap,n::Integer,xinit::T)
   @assert domain(m) == rangedomain(m)
-  x_ts = randn(n)*eps(T)
+  x_ts = Array{T}(n)#randn(n)*eps(T)
   x_ts[1] = xinit
   x = copy(xinit)
   for i = 2:n
     x = m(x)#*(1+x_ts[i])
-    x_ts[i] = x
+    x_ts[i] += x
   end
   x_ts
 end

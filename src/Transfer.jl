@@ -179,9 +179,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
     tol =T==Any?200eps():200eps(T)
 
     if L.colstops[kk] >= 1
-      # println(rs)
-      # println(transferfunction_nodes(L,2^max(4,nextpow2(L.colstops[kk])),kk,T))
-      coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^max(4,nextpow2(L.colstops[kk])),kk,T))
+      coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow2(L.colstops[kk])),kk,T))
       maxabsc = max(maximum(abs.(coeffs)),one(T))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs))/10)
     elseif L.colstops[kk]  == 0
