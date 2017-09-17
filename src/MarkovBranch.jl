@@ -101,9 +101,9 @@ branch(f,dom,ran,diff::Void;dir=Forward) = branch(f,dom,ran;dir)
 
 
 for TYP in (:FwdExpandingBranch,:RevExpandingBranch,:NeutralBranch)
-  @eval (b::$TYP)(x) = in(x,b.domain) ? unsafe_call(b,x) : throw(DomainError)
+  @eval (b::$TYP)(x) = in(x,b.domain) ? unsafe_call(b,x) : error("DomainError: $x in $(b.domain)")
   @eval mapD(b::$TYP,x) = in(x,b.domain) ? unsafe_mapD(b,x) : error("DomainError: $x in $(b.domain)")
-  @eval mapP(b::$TYP,x) = in(x,b.domain) ? unsafe_mapP(b,x) : throw(DomainError)
+  @eval mapP(b::$TYP,x) = in(x,b.domain) ? unsafe_mapP(b,x) : error("DomainError: $x in $(b.domain)")
   @eval domain(b::$TYP) = b.domain
   @eval rangedomain(b::$TYP) = b.rangedomain
 end
