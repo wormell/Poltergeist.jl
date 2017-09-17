@@ -65,28 +65,28 @@ lyapunov(m::AbstractCircleMap,ac=acim(m)) =
 
 
 # Markov derivatives
-@compat struct MarkovBranchDerivative{B<:MarkovBranch}
+immutable MarkovBranchDerivative{B<:MarkovBranch}
   b::B
 end
 (bd::MarkovBranchDerivative)(x::Number) = mapD(bd.b,x)
 Base.ctranspose(b::MarkovBranch) = MarkovBranchDerivative(b)
 # Base.transpose(b::MarkovBranch) = MarkovBranchDerivative(b)
 
-@compat struct MarkovBranchInverse{B<:MarkovBranch}
+immutable MarkovBranchInverse{B<:MarkovBranch}
   b::B
 end
 (bi::MarkovBranchInverse)(x::Number) = mapinv(bi.b,x)
 inv(b::MarkovBranch) = MarkovBranchInverse(b)
 ## TODO one day: convert routine to MarkovBranch?
 
-@compat struct MarkovBranchDerivativeInverse{B<:MarkovBranch}
+immutable MarkovBranchDerivativeInverse{B<:MarkovBranch}
   b::B
 end
 (bi::MarkovBranchDerivativeInverse)(x::Number) = mapinvD(bd.b,x)
 Base.ctranspose(bi::MarkovBranchInverse) = MarkovBranchDerivativeInverse(bi.b)
 # Base.transpose(b::MarkovBranch) = MarkovBranchDerivative(b)
 
-@compat struct MarkovMapDerivative{M<:AbstractMarkovMap}
+immutable MarkovMapDerivative{M<:AbstractMarkovMap}
   m::M
 end
 (md::MarkovMapDerivative)(x::Number) = mapD(md.m,x)

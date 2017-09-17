@@ -9,7 +9,7 @@ Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(dom
 # Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
 
 
-@compat struct MarkovMap{D<:Domain,R<:Domain,B<:MarkovBranch} <: AbstractMarkovMap{D,R}
+immutable MarkovMap{D<:Domain,R<:Domain,B<:MarkovBranch} <: AbstractMarkovMap{D,R}
   branches::AbstractVector{B}
   domain::D
   rangedomain::R
@@ -91,7 +91,7 @@ getbranch(m::MarkovMap,x) = in(x,m.domain) ? findfirst([in(x,domain(b)) for b in
 
 # nice constructors
 
-@compat struct Offset{F,T}
+immutable Offset{F,T}
   f::F
   offset::T
 end
@@ -129,7 +129,7 @@ end
 
 # Inducing
 
-@compat struct InducedMarkovMap{M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
+immutable InducedMarkovMap{M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
   m::M
   b::B
   domain::D
