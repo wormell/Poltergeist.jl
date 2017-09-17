@@ -17,7 +17,7 @@ end
 
 # InterpolationNode
 
-immutable InterpolationNode{S<:Space}<:Number
+@compat struct InterpolationNode{S<:Space}<:Number
   sp::S
   k::Int
   n::Int
@@ -147,12 +147,12 @@ end
 #   dfdx
 # end
 
-immutable FunctionDerivative{ff<:Function}
+@compat struct FunctionDerivative{ff<:Function}
   f::ff
 end
 (fd::FunctionDerivative)(x) = oftype(x,dualpart(fd.f(Dual(x,one(x)))))
 
-immutable BasisFun{S<:Space,II<:Integer}
+@compat struct BasisFun{S<:Space,II<:Integer}
   s::S
   k::II
 end
@@ -189,5 +189,5 @@ end
 
 # # Directions
 @compat abstract type Direction; end
-immutable Forward <: Direction; end
-immutable Reverse <: Direction; end
+@compat struct Forward <: Direction; end
+@compat struct Reverse <: Direction; end
