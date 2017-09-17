@@ -1,7 +1,7 @@
 export SolutionInv
 
 # Solution wrappers
-@compat struct SolutionInvWrapper{QR<:ApproxFun.QROperator,F<:Fun,T} <: Operator{T}
+immutable SolutionInvWrapper{QR<:ApproxFun.QROperator,F<:Fun,T} <: Operator{T}
   op::QR
   u::F
 end
