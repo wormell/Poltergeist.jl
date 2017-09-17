@@ -2,7 +2,7 @@
 
 @compat abstract type AbstractCircleMap{D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R} end
 
-immutable FwdCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
+@compat struct FwdCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
   f::ff
   dfdx::gg
   domain::D
@@ -37,7 +37,7 @@ function mapinvP(m::FwdCircleMap,i::Integer,y)
 end
 
 
-immutable RevCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
+@compat struct RevCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
   v::ff
   dvdx::gg
   domain::D

@@ -9,7 +9,7 @@ ApproxFun.israggedbelow(L::AbstractTransfer) = true
 #    @eval $OP(L::AbstractTransfer) = $OP(markovmap(L))
 #end
 
-immutable ConcreteTransfer{T,D<:Space,R<:Space,M<:AbstractMarkovMap} <: AbstractTransfer{T}
+@compat struct ConcreteTransfer{T,D<:Space,R<:Space,M<:AbstractMarkovMap} <: AbstractTransfer{T}
   m::M
   domainspace::D #Domain space
   rangespace::R
