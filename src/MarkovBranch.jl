@@ -8,7 +8,7 @@ Base.summary(b::MarkovBranch) =  string(typeof(b).name.name)*":"*string(domain(b
 Base.eltype(b::MarkovBranch) = eltype(rangedomain(b))
 # Base.show(io::IO,b::MarkovBranch) = print(io,typeof(b)) #temporary
 
-immutable FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
+@compat struct FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
   f::ff
   dfdx::gg
   domain::D
@@ -37,7 +37,7 @@ end
 
 # RevExpandingBranch
 
-immutable RevExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
+@compat struct RevExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: MarkovBranch{D,R}
   v::ff
   dvdx::gg
   domain::D
@@ -66,7 +66,7 @@ mapinvP(b::RevExpandingBranch,x) = (mapinv(b,x),mapinvD(b,x))
 
 
 # UNDE CONSTRUCTION: NeutralBranch
-immutable NeutralBranch
+@compat struct NeutralBranch
 end
 
 # branch constructors
