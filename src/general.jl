@@ -17,7 +17,7 @@ end
 
 # InterpolationNode
 
-type InterpolationNode{S<:Space}<:Number
+@compat struct InterpolationNode{S<:Space}<:Number
   sp::S
   k::Int
   n::Int
@@ -147,12 +147,12 @@ end
 #   dfdx
 # end
 
-type FunctionDerivative{ff<:Function}
+@compat struct FunctionDerivative{ff<:Function}
   f::ff
 end
 (fd::FunctionDerivative)(x) = oftype(x,dualpart(fd.f(Dual(x,one(x)))))
 
-type BasisFun{S<:Space,II<:Integer}
+@compat struct BasisFun{S<:Space,II<:Integer}
   s::S
   k::II
 end
