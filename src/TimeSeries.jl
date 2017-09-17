@@ -29,7 +29,7 @@ function timehist_init{T}(m::AbstractMarkovMap,n::Integer,nbins::Integer,xinit::
   bin_step = (domain(m).b-domain(m).a)/nbins
   x_hist = zeros(Int,nbins)
   x = copy(xinit)
-  for i = 2:n
+  for i = 1:n
     x = m(x)#*(1+randn()*eps(T))
     x_hist[min(nbins,max(1,convert(Int,ceil((x-bin_start)/bin_step))))] += 1
   end
