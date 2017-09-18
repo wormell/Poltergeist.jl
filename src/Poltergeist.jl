@@ -8,6 +8,9 @@ fromcanonicalD, tocanonicalD, fromcanonical, tocanonical, space
 
 export (..)
 
+## TEMPORARY PENDING APPROXFUN UPDATE
+temp_in(x,dom) = (x >= dom.a) && (x <= dom.b)
+
 include("general.jl")
 include("MarkovBranch.jl")
 include("MarkovMap.jl")

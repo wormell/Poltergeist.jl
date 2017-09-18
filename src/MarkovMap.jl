@@ -56,7 +56,7 @@ end
 branches(m) = m.branches
 nbranches(m::MarkovMap) = length(m.branches)
 nneutral(m::MarkovMap) = sum([isa(b,NeutralBranch) for b in m.branches])
-getbranch(m::MarkovMap,x) = in(x,m.domain) ? findfirst([in(x,domain(b)) for b in m.branches]) : throw(DomainError)
+getbranch(m::MarkovMap,x) = temp_in(x,m.domain) ? findfirst([temp_in(x,domain(b)) for b in m.branches]) : error("DomainError: $x ∉ $(m.domain)")
 
 # # TODO: maybe roll into branch constructors? maybe remove??
 # function MarkovMap{D,R,ff}(
