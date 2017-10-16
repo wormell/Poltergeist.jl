@@ -35,7 +35,7 @@ function SolutionInv(L::Operator,u::Fun=uniform(domainspace(L)))
 
   SolutionInvWrapper(qrfact(I-L + cache(u/sum(u) * di)),u)
 end
-SolutionInv(M::MarkovMap,u::Fun=uniform(Space(domain(M)))) = SolutionInv(Transfer(M,space(u)),u)
+SolutionInv(M::AbstractMarkovMap,u::Fun=uniform(Space(domain(M)))) = SolutionInv(Transfer(M,space(u)),u)
 
 Transfer(K::SolutionInvWrapper) = K.op.R.op.ops[2].op # eek??
 

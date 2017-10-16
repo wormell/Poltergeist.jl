@@ -123,6 +123,24 @@ end
 
 
 
+# Transfer function
+
+function transferfunction(x,m::MarkovMap,f,T)
+  y = zero(eltype(x));
+  for b in branches(m)
+    y += transferbranch(x,b,f,T)
+  end;
+  y
+end
+
+function transferfunction_int(x,y,m::MarkovMap,sk,T)
+  q = zero(eltype(x));
+
+  for b in branches(m)
+    q += transferbranch_int(x,y,b,sk,T)
+  end;
+  q
+end
 
 
 
@@ -188,6 +206,9 @@ for TYP in (:MarkovMap,:InducedMarkovMap)
   @eval ApproxFun.domain(m::$TYP) = m.domain
   @eval rangedomain(m::$TYP) = m.rangedomain
 end
+
+
+
 
 # InverseCache
 

@@ -107,3 +107,26 @@ for TYP in (:FwdExpandingBranch,:RevExpandingBranch,:NeutralBranch)
   @eval domain(b::$TYP) = b.domain
   @eval rangedomain(b::$TYP) = b.rangedomain
 end
+
+# transferbranch
+
+function transferbranch(x,b::MarkovBranch,f,T)
+  (v,dvdx) = mapinvP(b,x)
+  abs(det(dvdx))*f(v)
+end
+function transferbranch_int(x,y,b::MarkovBranch,f,T)
+  csf = cumsum(f)
+  vy = mapinv(b,y); vx = mapinv(b,x)
+  sgn = sign((vy-vx)/(y-x))
+  sgn*(csf(vy)-csf(vx))
+end
+
+function transferbranch(x,b::MarkovBranch,sk::BasisFun,T)
+  (v,dvdx) = mapinvP(b,x)
+  abs(det(dvdx))*getbasisfun(v,sk,T)
+end
+function transferbranch_int(x,y,b::MarkovBranch,sk::BasisFun,T)
+  vy = mapinv(b,y); vx = mapinv(b,x)
+  sgn = sign((vy-vx)/(y-x))
+  sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
+end

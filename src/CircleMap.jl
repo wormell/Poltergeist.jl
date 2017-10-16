@@ -96,3 +96,43 @@ for TYP in (:FwdCircleMap,:RevCircleMap)
   @eval ApproxFun.domain(m::$TYP) = m.domain
   @eval rangedomain(m::$TYP) = m.rangedomain
 end
+
+# Transfer function
+
+function transferfunction(x,m::AbstractCircleMap,f,T)
+  y = zero(eltype(x));
+  for b = 1:ncover(m)
+    (v,dvdx) = mapinvP(m,b,x)
+    y += abs(det(dvdx))*f(v)
+  end;
+  y
+end
+
+function transferfunction_int(x,y,m::AbstractCircleMap,f,T)
+  q = zero(eltype(x));
+  csf = cumsum(f)
+  for b = 1:ncover(m)
+    vy = mapinv(m,b,y); vx = mapinv(m,b,x)
+    sgn = sign((vy-vx)/(y-x))
+    q += sgn*(csf(vy)-csf(vx))
+  end;
+  q
+end
+
+function transferfunction(x,m::AbstractCircleMap,sk::BasisFun,T)
+  y = zero(eltype(x));
+  for b = 1:ncover(m)
+    (v,dvdx) = mapinvP(m,b,x)
+    y += abs(det(dvdx)).*getbasisfun(v,sk,T)
+  end
+  y
+end
+function transferfunction_int(x,y,m::AbstractCircleMap,sk::BasisFun,T)
+  q = zero(eltype(x));
+  for b = 1:ncover(m)
+    vy = mapinv(m,b,y); vx = mapinv(m,b,x)
+    sgn = sign((vy-vx)/(y-x))
+    q += sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
+  end
+  q
+end
