@@ -60,91 +60,6 @@ end
 
 
 
-# transferbranch
-
-function transferbranch(x,b::MarkovBranch,f,T)
-  (v,dvdx) = mapinvP(b,x)
-  abs(det(dvdx))*f(v)
-end
-function transferbranch_int(x,y,b::MarkovBranch,f,T)
-  csf = cumsum(f)
-  vy = mapinv(b,y); vx = mapinv(b,x)
-  sgn = sign((vy-vx)/(y-x))
-  sgn*(csf(vy)-csf(vx))
-end
-
-function transferbranch(x,b::MarkovBranch,sk::BasisFun,T)
-  (v,dvdx) = mapinvP(b,x)
-  abs(det(dvdx))*getbasisfun(v,sk,T)
-end
-function transferbranch_int(x,y,b::MarkovBranch,sk::BasisFun,T)
-  vy = mapinv(b,y); vx = mapinv(b,x)
-  sgn = sign((vy-vx)/(y-x))
-  sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
-end
-
-# Transfer function gives you values of LT(x)
-
-function transferfunction(x,m::MarkovMap,f,T)
-  y = zero(eltype(x));
-  for b in branches(m)
-    y += transferbranch(x,b,f,T)
-  end;
-  y
-end
-
-function transferfunction_int(x,y,m::MarkovMap,sk,T)
-  q = zero(eltype(x));
-
-  for b in branches(m)
-    q += transferbranch_int(x,y,b,sk,T)
-  end;
-  q
-end
-
-
-# Transfer function for CircleMaps
-
-function transferfunction(x,m::AbstractCircleMap,f,T)
-  y = zero(eltype(x));
-  for b = 1:ncover(m)
-    (v,dvdx) = mapinvP(m,b,x)
-    y += abs(det(dvdx))*f(v)
-  end;
-  y
-end
-
-function transferfunction_int(x,y,m::AbstractCircleMap,f,T)
-  q = zero(eltype(x));
-  csf = cumsum(f)
-  for b = 1:ncover(m)
-    vy = mapinv(m,b,y); vx = mapinv(m,b,x)
-    sgn = sign((vy-vx)/(y-x))
-    q += sgn*(csf(vy)-csf(vx))
-  end;
-  q
-end
-
-function transferfunction(x,m::AbstractCircleMap,sk::BasisFun,T)
-  y = zero(eltype(x));
-  for b = 1:ncover(m)
-    (v,dvdx) = mapinvP(m,b,x)
-    y += abs(det(dvdx)).*getbasisfun(v,sk,T)
-  end
-  y
-end
-function transferfunction_int(x,y,m::AbstractCircleMap,sk::BasisFun,T)
-  q = zero(eltype(x));
-  for b = 1:ncover(m)
-    vy = mapinv(m,b,y); vx = mapinv(m,b,x)
-    sgn = sign((vy-vx)/(y-x))
-    q += sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
-  end
-  q
-end
-
-
-
 # Transfer a fun - TODO
 function transfer(m::AbstractMarkovMap,fn)
   @inline tf(x) = transferfunction(x,m,fn,eltype(eltype(rangedomain(m))))
@@ -176,10 +91,10 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
     kind > 1 && (mc = max(mc,maximum(L.colstops[k[kind-1]+1:kk])))
 
     #    f(x) = transferfunction(x,L,kk,T)
-    tol =T==Any?200eps():200eps(T)
+    tol =T==Any?20eps():20eps(T)
 
     if L.colstops[kk] >= 1
-      coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow2(L.colstops[kk])),kk,T))
+      coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow2(L.colstops[kk])),kk,T))[1:L.colstops[kk]]
       maxabsc = max(maximum(abs.(coeffs)),one(T))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs))/10)
     elseif L.colstops[kk]  == 0
@@ -209,9 +124,9 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
           maxabsfr = max(maxabsfr,one(T))
           b = ApproxFun.block(rs,length(coeffs))
           bs = ApproxFun.blockstart(rs,max(div(2b,3),1))
-          if length(coeffs) > 8 && maximum(abs.(coeffs[bs:end])) < tol*maxabsc*logn &&
-              all(kkk->norm(Fun(rs,coeffs)(r[kkk])-fr[kkk],1)<tol*length(coeffs)*maxabsfr*1000,1:length(r))
-            chop!(coeffs,tol*maxabsc*logn/10)
+          if length(coeffs) > 8 && maximum(abs.(coeffs[bs:end])) < 20tol*maxabsc*logn &&
+              all(kkk->norm(Fun(rs,coeffs)(r[kkk])-fr[kkk],1)<tol*length(coeffs)*maxabsfr*500,1:length(r))
+            chop!(coeffs,tol*maxabsc*logn)
             break
           end
         end
