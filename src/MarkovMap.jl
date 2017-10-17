@@ -55,6 +55,8 @@ end
 
 branches(m) = m.branches
 nbranches(m::MarkovMap) = length(m.branches)
+eachbranchindex(m::MarkovMap) = 1:nbranches(m)
+
 nneutral(m::MarkovMap) = sum([isa(b,NeutralBranch) for b in m.branches])
 getbranch(m::MarkovMap,x) = temp_in(x,m.domain) ? findfirst([temp_in(x,domain(b)) for b in m.branches]) : error("DomainError: $x ∉ $(m.domain)")
 
@@ -91,12 +93,15 @@ getbranch(m::MarkovMap,x) = temp_in(x,m.domain) ? findfirst([temp_in(x,domain(b)
 
 # nice constructors
 
+# modulomap
+
 @compat struct Offset{F,T}
   f::F
   offset::T
 end
 (of::Offset)(x) = of.f(x)-of.offset
 
+# TODO: modulomap for reverse direction
 function modulomap{ff}(f::ff,dom,ran=dom;diff=autodiff(f,dom))
   domd = Domain(dom); randm = Domain(ran)
   fa = f(first(domd)); fb = f(last(domd))

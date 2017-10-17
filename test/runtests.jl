@@ -79,9 +79,13 @@ lanshift = modulomap(x->5(x/5-6)/2-(x/5-6)^2/2,30..35,0..1)
 doublelan = lan ∘ lanshift ∘ shiftmap
 doubleK = SolutionInv(doublelan)
 doublerho = acim(doubleK)
+#TODO: why is this so slow:
 @time doublerho = acim(lan)
 @test doublerho ≈ rho
 @test lyapunov(doubleK) ≈ 2l_exp
+
+@test lyapunov(perturb(lan,sinpi,-0.1)∘inv(perturb(0..1,sinpi,-0.1))) ≈ l_exp
+@time acim(perturb(lan,sinpi,-0.1)∘inv(perturb(0..1,sinpi,-0.1)))
 
 # Correlation sums
 println("Correlation sum test")
@@ -95,11 +99,13 @@ A = Fun(x->x^2,0..1); B = Fun(sin,0..1)
 cA,cB = covariancefunction(lan,A,B)
 @test sum(cA)+sum(cB[2:end]) ≈ birkhoffcov(lan,A,B)
 @time covariancefunction(lan,A,B)
+  println("Should be <0.25s")
 lancov = covariancefunction(lan,A)
 @test lancov[1] + 2sum(lancov[2:end]) ≈ birkhoffvar(lan,A)
 @time covariancefunction(lan,A)
 covariancefunction(lan,A,100)
 @time covariancefunction(lan,A,100)
+  println("Should be <0.15s")
 
 # Calling
 println("Newton's method test ☏")

@@ -3,18 +3,22 @@ struct ComposedMarkovMap{M<:AbstractMarkovMap,D<:Domain,R<:Domain,N} <: Abstract
   domain::D
   rangedomain::R
 end
+(∘)(f::AbstractMarkovMap,g::AbstractMarkovMap) = ComposedMarkovMap(f,g)
 
 function ComposedMarkovMap(maps...)
-  T = typejoin(map(typeof,maps)...)
   N = length(maps)
   ran = rangedomain(maps[1])
+  mps = isa(maps[1],ComposedMarkovMap) ? maps[1].maps : (maps[1],)
   for i = 1:N-1
     @assert rangedomain(maps[i+1]) == domain(maps[i])
+    mps = isa(maps[i+1],ComposedMarkovMap) ? (mps...,maps[i+1].maps...) : (mps...,maps[i+1])
   end
   dom = domain(maps[end])
-  ComposedMarkovMap{T,typeof(dom),typeof(ran),N}(convert(NTuple{N,T},maps),dom,ran)
+
+  Nf = length(mps)
+  T = typejoin(map(typeof,mps)...)
+  ComposedMarkovMap{T,typeof(dom),typeof(ran),Nf}(convert(NTuple{Nf,T},mps),dom,ran)
 end
-(∘)(f::AbstractMarkovMap,g::AbstractMarkovMap) = ComposedMarkovMap(f,g)
 
 complength{M,D,R,N}(::ComposedMarkovMap{M,D,R,N}) = N
 
@@ -67,17 +71,18 @@ function getbranch(m::ComposedMarkovMap{M,D,R,N},x) where {M,D,R,N}
 end
 
 nbranches(C::ComposedMarkovMap) = prod(nbranches(mm for mm in C.maps))
+eachbranchindex(C::ComposedMarkovMap) = product(eachbranchindex(mm) for mm in C.maps)
 
+#TODO: must be faster??
 function transferfunction{M,D,R,N}(x,m::ComposedMarkovMap{M,D,R,N},f,T)
-  m2 = ComposedMarkovMap(m.maps[2:end],m.domain,rangedomain(m.maps[2]))
+  m2 = ComposedMarkovMap(m.maps[2:end]...)
   transferfunction(x,m.maps[1],x->transferfunction(x,m2,f,T),T)
 end
 function transferfunction{M,D,R}(x,m::ComposedMarkovMap{M,D,R,1},f,T)
   transferfunction(x,m.maps[1],f,T)
 end
 
-
-# TODO: transferbranch_int
+# TODO: transferfunction_int
 
 
 # TODO

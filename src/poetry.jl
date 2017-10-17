@@ -1,3 +1,5 @@
+export perturb
+
 # Markov derivatives
 @compat struct MarkovBranchDerivative{B<:MarkovBranch}
   b::B
@@ -25,6 +27,12 @@ Base.ctranspose(bi::MarkovBranchInverse) = MarkovBranchDerivativeInverse(bi.b)
 end
 (md::MarkovMapDerivative)(x::Number) = mapD(md.m,x)
 Base.ctranspose(b::AbstractMarkovMap) = MarkovMapDerivative(b)
+
+# Linear response perturbations
+perturb(d,X,ϵ) = perturb(Domain(d),X,ϵ)
+perturb(d::IntervalDomain,X,ϵ) = MarkovMap([x->x+ϵ*X(x)],[d],d)
+perturb(d::PeriodicDomain,X,ϵ) = FwdCircleMap([x->x+ϵ*X(x)],d)
+perturb(m::AbstractMarkovMap,X,ϵ) = perturb(rangedomain(m),X,ϵ)∘m
 
 # # plotting
 # function plot(m::MarkovMap)
