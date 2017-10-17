@@ -1,9 +1,3 @@
-# export ∘
-
-(∘)(f::AbstractMarkovMap,g::AbstractMarkovMap) = ComposedMarkovMap(f,g)
-
-
-
 # Markov derivatives
 @compat struct MarkovBranchDerivative{B<:MarkovBranch}
   b::B
@@ -31,7 +25,6 @@ Base.ctranspose(bi::MarkovBranchInverse) = MarkovBranchDerivativeInverse(bi.b)
 end
 (md::MarkovMapDerivative)(x::Number) = mapD(md.m,x)
 Base.ctranspose(b::AbstractMarkovMap) = MarkovMapDerivative(b)
-
 
 # # plotting
 # function plot(m::MarkovMap)

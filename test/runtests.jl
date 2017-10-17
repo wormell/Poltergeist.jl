@@ -90,6 +90,17 @@ A2 = Fun(x->sin(sin(2pi*x)),d2)
 cs1f = correlationsum(M1f,A1)
 @test maximum(abs.(cs1f.(pts)-correlationsum(M2f,A2).(pts))) .< 2000eps(1.)
 
+println("Correlation function test")
+A = Fun(x->x^2,0..1); B = Fun(sin,0..1)
+cA,cB = covariancefunction(lan,A,B)
+@test sum(cA)+sum(cB[2:end]) ≈ birkhoffcov(lan,A,B)
+@time covariancefunction(lan,A,B)
+lancov = covariancefunction(lan,A)
+@test lancov[1] + 2sum(lancov[2:end]) ≈ birkhoffvar(lan,A)
+@time covariancefunction(lan,A)
+covariancefunction(lan,A,100)
+@time covariancefunction(lan,A,100)
+
 # Calling
 println("Newton's method test ☏")
 test_f = linspace(d2.a,d2.b,20)[1:end-1] # map boundaries are dodgy because multivalued
