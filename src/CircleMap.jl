@@ -90,7 +90,10 @@ end
 CircleMap(f,d,r=d;dir=Forward,diff=autodiff(f,dir=Forward ? d : r)) = dir == Forward ?
   FwdCircleMap(f,d,r,diff) : RevCircleMap(f,d,r,diff)
 
+MarkovMap(m::FwdCircleMap) = modulomap(m.f,m.domain,m.rangedomain,m.dfdx)
+
 ncover(m::AbstractCircleMap) = m.cover
+eachbranchindex(m::AbstractCircleMap) = 1:m.cover
 
 for TYP in (:FwdCircleMap,:RevCircleMap)
   @eval ApproxFun.domain(m::$TYP) = m.domain

@@ -20,8 +20,9 @@ include("Transfer.jl")
 include("InducedTransfer.jl")
 include("Solution.jl")
 include("TimeSeries.jl")
-include("poetry.jl")
+include("conjugacy.jl")
 include("statistics.jl")
+include("poetry.jl")
 include("examples.jl")
 
 end # module
