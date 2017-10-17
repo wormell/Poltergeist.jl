@@ -72,16 +72,18 @@ function covariancefunction(L::Operator,A::Fun;r=acim(L),tol=eps(norm(A.coeffici
   cf[1] = sum(A*Az)
   for i = 1:n
     Az = L*Az
-    cf[i+1] = sum(A*Az)
+    Az -= r*sum(Az)
     chop!(Az)
+    cf[i+1] = sum(A*Az)
   end
   while maximum(abs.(cf[div(2n,3):end]))>tol && n <= 2^20
     n = 2n
     pad!(cf,n+1)
     for i = div(n,2):n
       Az = L*Az
-      cf[i+1] = sum(A*Az)
+      Az -= r*sum(Az)
       chop!(Az)
+      cf[i+1] = sum(A*Az)
     end
     # chop!(Az)
   end
@@ -107,8 +109,9 @@ function covariancefunction(L::Operator,A::Fun,B::Fun,n::Int;r=acim(L))
   cfB[1] = cfA[1]
   for i = 1:n
     Az = L*Az;Bz = L*Bz
-    cfA[i+1] = sum(A*Bz); cfB[i+1] = sum(B*Az)
+    Az -= r*sum(Az); Bz -= r*sum(Bz)
     chop!(Az); chop!(Bz)
+    cfA[i+1] = sum(A*Bz); cfB[i+1] = sum(B*Az)
   end
   cfA,cfB
 end
@@ -146,10 +149,12 @@ end
 lyapunov(m::Operator) = lyapunov(markovmap(m),acim(m),rangespace(m))
 
 #TODO: lyapunov exponent of ComposedMarkovMap
-function MA_process(L,A::Fun)
+
+# Gaussian process parametrisation
+function logMA_process(L,A::Fun)
   @assert isreal(A)
   corf = covariancefunction(L,A)
-  d = Circle(); sp = Taylor(d)
+  # d = Circle(); sp = Taylor(d)
   Corfn = Fun(CosSpace(),[corf[1];2corf[2:end]])
   # lCf = log(Corfn)/2
   # SlogMA = Fun(SinSpace(),coefficients(lCf)[2:end])
@@ -157,20 +162,21 @@ function MA_process(L,A::Fun)
   #  MA = 1+expm1(Fun(sp,chop!(coefficients(log(Corfn)/2))))
   #  # TODO: because the special functions in ApproxFun are buggy
   # chop!(real.(coefficients(MA)[1:2:end]))
-  logMA = Fun(sp,coefficients(log(Corfn)))/2
-  MA = Fun(x->exp(logMA(x)),sp)
-  chop!(real.(coefficients(MA)))
-end
 
-function AR_process(L,A::Fun)
-  @assert isreal(A)
-  corf = covariancefunction(L,A)
-  d = Circle(); sp = Taylor(d)
+  ## OR
   # Corfn = Fun(Laurent(d),[corf[1];repeat(corf[2:end],inner=2)])
   # logMA = Fun(sp,
   # coefficients(Fun(x->log(abs(Corfn(e^(im*x)))),CosSpace())))/2
-  Corfn = Fun(CosSpace(),[corf[1];2corf[2:end]])
-  logMA = Fun(sp,coefficients(log(Corfn)))/2
-  AR = Fun(x->exp(-logMA(x)),sp)
-  chop!(real.(coefficients(AR)))
+
+  logMA = Fun(Taylor(),coefficients(log(Corfn)))/2
+end
+
+function MA_process(L,A::Fun)
+  logMA = logMA_process(L,A)
+  chop!(real.(coefficients(Fun(x->exp(logMA(x)),space(logMA)))))
+end
+
+function AR_process(L,A::Fun)
+  logMA = logMA_process(L,A)
+  chop!(real.(coefficients(Fun(x->exp(-logMA(x)),space(logMA)))))
 end
