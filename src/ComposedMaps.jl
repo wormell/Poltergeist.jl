@@ -2,7 +2,7 @@ struct ComposedMarkovMap{M<:AbstractMarkovMap,D<:Domain,R<:Domain,N} <: Abstract
   maps::NTuple{N,M}
   domain::D
   rangedomain::R
-  end
+end
 
 function ComposedMarkovMap(maps...)
   T = typejoin(map(typeof,maps)...)
@@ -14,6 +14,7 @@ function ComposedMarkovMap(maps...)
   dom = domain(maps[end])
   ComposedMarkovMap{T,typeof(dom),typeof(ran),N}(convert(NTuple{N,T},maps),dom,ran)
 end
+(∘)(f::AbstractMarkovMap,g::AbstractMarkovMap) = ComposedMarkovMap(f,g)
 
 complength{M,D,R,N}(::ComposedMarkovMap{M,D,R,N}) = N
 

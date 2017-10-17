@@ -1,8 +1,8 @@
 # CircleMaps
 
-@compat abstract type AbstractCircleMap{D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R} end
+@compat abstract type AbstractCircleMap{D<:PeriodicDomain,R<:PeriodicDomain} <: AbstractMarkovMap{D,R} end
 
-@compat struct FwdCircleMap{D<:Domain,R<:Domain,ff,gg,T} <: AbstractCircleMap{D,R}
+@compat struct FwdCircleMap{D<:PeriodicDomain,R<:PeriodicDomain,ff,gg,T} <: AbstractCircleMap{D,R}
   f::ff
   dfdx::gg
   domain::D
@@ -11,7 +11,7 @@
   fa::T
   fb::T
 end
-function FwdCircleMap{D<:Domain,R<:Domain,ff,gg}(f::ff,domd::D,randm::R,dfdx::gg=autodiff(f,domd))
+function FwdCircleMap{D<:PeriodicDomain,R<:PeriodicDomain,ff,gg}(f::ff,domd::D,randm::R,dfdx::gg=autodiff(f,domd))
   # @assert isempty(∂(randm)) isempty(∂(domd))
   fa = f(first(domd)); fb = f(last(domd))
   cover_est = (fb-fa)/arclength(randm)

@@ -55,8 +55,9 @@ function covariancefunction(L::Operator,A::Fun,n::Int;r=acim(L))
   cf[1] = sum(A*Az)
   for i = 1:n
     Az = L*Az
-    cf[i+1] = sum(A*Az)
+    Az -= r*sum(Az)
     chop!(Az)
+    cf[i+1] = sum(A*Az)
   end
   cf
 end
@@ -77,9 +78,10 @@ function covariancefunction(L::Operator,A::Fun;r=acim(L),tol=eps(norm(A.coeffici
     cf[i+1] = sum(A*Az)
   end
   while maximum(abs.(cf[div(2n,3):end]))>tol && n <= 2^20
+    n_old = n
     n = 2n
     pad!(cf,n+1)
-    for i = div(n,2):n
+    for i = n_old+1:n
       Az = L*Az
       Az -= r*sum(Az)
       chop!(Az)
