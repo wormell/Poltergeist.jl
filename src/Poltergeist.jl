@@ -2,9 +2,10 @@ module Poltergeist
   using Base, ApproxFun, BandedMatrices, Compat, DualNumbers, StaticArrays, IntervalSets#, PyPlot#, FastTransforms
 
 import Base: values,getindex,setindex!,*,.*,+,.+,-,.-,==,<,<=,>,|,
->=,./,/,.^,^,\,∪,∘,transpose, size, length,  eltype, inv, mod, convert#issymmetric,
-import ApproxFun: domainspace, rangespace, domain, israggedbelow, RaggedMatrix, resizedata!, colstop, CachedOperator, Infinity,
-fromcanonicalD, tocanonicalD, fromcanonical, tocanonical, space
+  >=,./,/,.^,^,\,∪,∘,transpose, size, length,  eltype, inv, mod, convert#issymmetric,
+import ApproxFun: domainspace, rangespace, domain, israggedbelow, RaggedMatrix,
+  resizedata!, colstop, CachedOperator, Infinity, IntervalDomain,
+  fromcanonicalD, tocanonicalD, fromcanonical, tocanonical, space
 
 export (..), Segment, PeriodicInterval, Fun
 

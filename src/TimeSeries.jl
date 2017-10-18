@@ -19,8 +19,8 @@ function timeseries_init{T}(m::AbstractMarkovMap,n::Integer,xinit::T)
   x_ts
 end
 timeseries(m::AbstractMarkovMap,n::Integer;x0=map_n(m,rand(domain(m)),10^4)) = timeseries_init(m,n,x0)
-timeseries(m::AbstractMarkovMap,n::Integer,rho::Fun) = timeseries_init(m,n,sample(rho))
-#convert(Int,floor(sqrt(n)/2))
+samplable(ρ::Fun) = isa(domain(ρ),IntervalDomain) ? ρ : Fun(ρ,Segment(domain(ρ)))
+timeseries(m::AbstractMarkovMap,n::Integer,ρ::Fun) = timeseries_init(m,n,sample(samplable(ρ)))
 
 
 function timehist_init{T}(m::AbstractMarkovMap,n::Integer,nbins::Integer,xinit::T)
@@ -37,4 +37,4 @@ function timehist_init{T}(m::AbstractMarkovMap,n::Integer,nbins::Integer,xinit::
   bin_start:bin_step:domain(m).b,x_hist
 end
 timehist(m::AbstractMarkovMap,n::Integer,nbins::Integer;x0=map_n(m,rand(domain(m)),10^4)) = timehist_init(m,n,nbins,x0)
-timehist(m::AbstractMarkovMap,n::Integer,nbins::Integer,rho::Fun) = timehist_init(m,n,nbins,sample(rho))
+timehist(m::AbstractMarkovMap,n::Integer,nbins::Integer,ρ::Fun) = timehist_init(m,n,nbins,sample(samplable(ρ)))
