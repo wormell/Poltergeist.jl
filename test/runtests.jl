@@ -47,9 +47,9 @@ acim(M2f)
 println("Should be ≤0.12s")
 
 pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
-@test maximum(abs.(ρ1f.(pts) - ρ2f.(pts))) < 1000eps(1.)
-@test maximum(abs.(ρ1b.(pts) - ρ2b.(pts))) < 1000eps(1.)
-@test maximum(abs.(ρ2b.(pts) - ρ2ba.(pts))) < 1000eps(1.)
+@test maximum(abs.(ρ1f.(pts) - ρ2f.(pts))) < 2000eps(1.)
+@test maximum(abs.(ρ1b.(pts) - ρ2b.(pts))) < 2000eps(1.)
+@test maximum(abs.(ρ2b.(pts) - ρ2ba.(pts))) < 2000eps(1.)
 
 # # Transfer
 # @test transfer(M1f,x->Fun(Fourier(d1),[0.,1.])(x),0.28531) == Poltergeist.transferfunction(0.28531,M1f,Poltergeist.BasisFun(Fourier(d1),2),Float64)
@@ -76,16 +76,21 @@ K = SolutionInv(lan);
 println("Composition test 🎼")
 shiftmap = modulomap(x->5x+30,0..1,30..35)
 lanshift = modulomap(x->5(x/5-6)/2-(x/5-6)^2/2,30..35,0..1)
-doublelan = lan ∘ lanshift ∘ shiftmap
+@time doublelan = lan ∘ lanshift ∘ shiftmap
+println("Should be ≤0.07s")
 doubleK = SolutionInv(doublelan)
 doublerho = acim(doubleK)
-#TODO: why is this so slow:
-@time doublerho = acim(lan)
+@time doublerho = acim(doublelan)
+println("Should be ≤0.4s")
 @test doublerho ≈ rho
 @test lyapunov(doubleK) ≈ 2l_exp
 
-@test lyapunov(perturb(lan,sinpi,-0.1)∘inv(perturb(0..1,sinpi,-0.1))) ≈ l_exp
-@time acim(perturb(lan,sinpi,-0.1)∘inv(perturb(0..1,sinpi,-0.1)))
+lanpet = perturb(lan,sinpi,-0.1)∘inv(perturb(0..1,sinpi,-0.1))
+@test lyapunov(lanpet) ≈ l_exp
+@time lyapunov(lanpet)
+println("Should be ≤0.01s")
+# @time lanpet = acim(lanpet)
+# @time lyapunov(lanpet)
 
 # Correlation sums
 println("Correlation sum test")
