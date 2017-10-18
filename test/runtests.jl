@@ -135,7 +135,10 @@ println("Time series tests")
 NI = 10^6; NB = 10^3
 @time ts = timeseries(M1f,NI,ρ1f)
 println("Should be ≤4s")
-@test abs(sum(sin.(sin.(2pi*ts)))/NI - sum(ρ1f*A1))< (4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
+println("Time series:")
+display(ts')
+@test abs(sum(sin.(sinpi.(2ts)))/NI #- sum(ρ1f*A1)  # which is 0
+      )< (4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
 
 @time cts = timehist(M2f,NI,NB,ρ2f)
 @test abs(sum(sin.(sin.(2pi*cts[1][1:end-1])).*cts[2])/NI - sum(ρ2f*A2))< 1/NB+(4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
