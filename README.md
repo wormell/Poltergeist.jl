@@ -45,6 +45,8 @@ det(I-4L) # Fredholm determinant
 using Plots
 scatter(eigvals(L,80))
 ```
+<img src=https://github.com/johnwormell/Poltergeist.jl/raw/master/images/eigvals.png width=500>
+
 
 In particular, you can solve for many statistical properties, many of which Poltergeist has built-in commands for. Most of these commands allow you to use the ```MarkovMap``` directly (bad, zero caching between uses), transfer operator (caches transfer operator entries, usually the slowest step), or the ```SolutionInv``` operator (caches QR factorisation as well).
 
