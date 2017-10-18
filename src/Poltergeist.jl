@@ -6,7 +6,7 @@ import Base: values,getindex,setindex!,*,.*,+,.+,-,.-,==,<,<=,>,|,
 import ApproxFun: domainspace, rangespace, domain, israggedbelow, RaggedMatrix, resizedata!, colstop, CachedOperator, Infinity,
 fromcanonicalD, tocanonicalD, fromcanonical, tocanonical, space
 
-export (..)
+export (..), Segment, PeriodicInterval, Fun
 
 ## TEMPORARY PENDING APPROXFUN UPDATE
 temp_in(x,dom) = (x >= dom.a) && (x <= dom.b)

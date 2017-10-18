@@ -1,38 +1,35 @@
-struct ComposedMarkovMap{M<:AbstractMarkovMap,D<:Domain,R<:Domain,N} <: AbstractMarkovMap{D,R}
-  maps::NTuple{N,M}
+struct ComposedMarkovMap{T<:Tuple,D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
+  maps::T
   domain::D
   rangedomain::R
 end
 (∘)(f::AbstractMarkovMap,g::AbstractMarkovMap) = ComposedMarkovMap(f,g)
 
 function ComposedMarkovMap(maps...)
-  N = length(maps)
   ran = rangedomain(maps[1])
   mps = isa(maps[1],ComposedMarkovMap) ? maps[1].maps : (maps[1],)
-  for i = 1:N-1
+  for i = 1:length(maps)-1
     @assert rangedomain(maps[i+1]) == domain(maps[i])
     mps = isa(maps[i+1],ComposedMarkovMap) ? (mps...,maps[i+1].maps...) : (mps...,maps[i+1])
   end
   dom = domain(maps[end])
 
-  Nf = length(mps)
-  T = typejoin(map(typeof,mps)...)
-  ComposedMarkovMap{T,typeof(dom),typeof(ran),Nf}(convert(NTuple{Nf,T},mps),dom,ran)
+  ComposedMarkovMap(mps,dom,ran)
 end
 
-complength{M,D,R,N}(::ComposedMarkovMap{M,D,R,N}) = N
+complength(c::ComposedMarkovMap) = length(c.maps)
 
-function (c::ComposedMarkovMap{M,D,R,N})(x) where {M,D,R,N}
+function (c::ComposedMarkovMap)(x)
   f = c.maps[end](x)
-  for i = N-1:-1:1
+  for i = complength(c)-1:-1:1
     f = c.maps[i](f)
   end
   f
 end
 
-function mapP(c::ComposedMarkovMap{M,D,R,N},x) where {M,D,R,N}
+function mapP(c::ComposedMarkovMap,x)
   f,dfdx = mapP(c.maps[end],x)
-  for i = N-1:-1:1
+  for i = complength(c)-1:-1:1
     f,dfdxs = mapP(c.maps[i],f)
     dfdx *= dfdxs
   end
@@ -40,16 +37,16 @@ function mapP(c::ComposedMarkovMap{M,D,R,N},x) where {M,D,R,N}
 end
 mapD(c::ComposedMarkovMap,x) = mapP(c,x)[2]
 
-function mapinv(c::ComposedMarkovMap{M,D,R,N},b,x) where {M,D,R,N}
+function mapinv(c::ComposedMarkovMap,b,x)
   v = mapinv(c.maps[1],b[1],x)
-  for i = 2:N
+  for i = 2:complength(c)
     v = mapinv(c.maps[i],b[i],v)
   end
   v
 end
-function mapinvP(c::ComposedMarkovMap{M,D,R,N},b,x) where {M,D,R,N}
+function mapinvP(c::ComposedMarkovMap,b,x)
   v,dvdx = mapinvP(c.maps[1],b[1],x)
-  for i = 2:N
+  for i = 2:complength(c)
     v,dvdxs = mapinvP(c.maps[i],b[i],v)
     dvdx *= dvdxs
   end
@@ -59,11 +56,11 @@ mapinvD(c::ComposedMarkovMap,b,x) = mapinvP(c,b,x)[2]
 
 # TODO: map(P,D)(c,b,x)
 
-function getbranch(m::ComposedMarkovMap{M,D,R,N},x) where {M,D,R,N}
+function getbranch(m::ComposedMarkovMap,x)
   temp_in(x,m.domain) || error("DomainError: $x ∉ $(m.domain)")
   fx = x
-  br = getbranch(m.maps[N],fx)
-  for i = N-1:-1:1
+  br = getbranch(m.maps[end],fx)
+  for i = complength(c)-1:-1:1
     fx = m.maps[i+1](fx)
     br = (getbranch(m.maps[i],fx),br...)
   end
@@ -74,12 +71,22 @@ nbranches(C::ComposedMarkovMap) = prod(nbranches(mm for mm in C.maps))
 eachbranchindex(C::ComposedMarkovMap) = product(eachbranchindex(mm) for mm in C.maps)
 
 #TODO: must be faster??
-function transferfunction{M,D,R,N}(x,m::ComposedMarkovMap{M,D,R,N},f,T)
-  m2 = ComposedMarkovMap(m.maps[2:end]...)
-  transferfunction(x,m.maps[1],x->transferfunction(x,m2,f,T),T)
-end
-function transferfunction{M,D,R}(x,m::ComposedMarkovMap{M,D,R,1},f,T)
+function transferfunction{M<:AbstractMarkovMap}(x,m::ComposedMarkovMap{Tuple{M}},f,T)
   transferfunction(x,m.maps[1],f,T)
+end
+
+struct TransferCall{M<:AbstractMarkovMap,ff,T}
+  m::M
+  f::ff
+  t::Type{T}
+end
+# TransferCall(m,f,T) = TransferCall{typeof(m),typeof(f),T}(m,f)
+(t::TransferCall)(x) = transferfunction(x,t.m,t.f,t.t)
+
+function transferfunction(x,m::ComposedMarkovMap,f,T)
+  m2 = ComposedMarkovMap(m.maps[2:end],domain(m.maps[end]),rangedomain(m.maps[2]))
+  transferfunction(x,m.maps[1],#x->transferfunction(x,m2,f,T),T)
+    TransferCall(m2,f,T),T)
 end
 
 # TODO: transferfunction_int

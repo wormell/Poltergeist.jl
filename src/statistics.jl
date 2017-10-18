@@ -139,8 +139,6 @@ function covariancefunction(L::Operator,A::Fun,B::Fun;r=acim(L),tol=eps(norm(coe
 end
 
 # Lyapunov exponent
-# IMPORTANT TODO: check that this works in general cause the function to be transferred
-# isn't necessarily continuous
 function lyapunov(f::AbstractMarkovMap,r=acim(f),sp=Space(rangedomain(f)))
   sum(Fun(x->transferfunction(x,f,x->log(abs(f'(x)))*r(x),eltype(f)),sp))
 end
@@ -150,7 +148,22 @@ function lyapunov(K::SolutionInvWrapper)
 end
 lyapunov(m::Operator) = lyapunov(markovmap(m),acim(m),rangespace(m))
 
-#TODO: lyapunov exponent of ComposedMarkovMap
+struct LyapContainer{M<:AbstractMarkovMap,rr}
+  m::M
+  tr::rr
+end
+(lc::LyapContainer)(x) = log(abs(lc.m'(x)))*lc.tr(x)
+
+function lyapunov(f::ComposedMarkovMap,r=acim(f))#,sp=Space(rangedomain(f)))
+  T = eltype(f)
+  tr = copy(r)
+  lyap = sum(Fun(x->transferfunction(x,f.maps[end],LyapContainer(f.maps[end],tr),T),rangedomain(f.maps[end])))
+  for k = complength(f)-1:-1:1
+    tr = Fun(x->transferfunction(x,f.maps[k+1],tr,T),rangedomain(f.maps[k+1]))
+    lyap += sum(Fun(x->transferfunction(x,f.maps[k],LyapContainer(f.maps[k],tr),T),rangedomain(f.maps[k])))
+  end
+  lyap
+end
 
 # Gaussian process parametrisation
 function logMA_process(L,A::Fun)

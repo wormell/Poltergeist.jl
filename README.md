@@ -1,9 +1,9 @@
-# Poltergeist.jl 
+# Poltergeist.jl
 
 [![Build Status](https://travis-ci.org/wormell/Poltergeist.jl.svg?branch=master)](https://travis-ci.org/wormell/Poltergeist.jl)
 [![Coverage Status](https://coveralls.io/repos/github/wormell/Poltergeist.jl/badge.svg?branch=master)](https://coveralls.io/github/wormell/Poltergeist.jl?branch=master)
 
-Poltergeist is a package for quick, accurate and abstract approximation of statistical properties of one-dimensional chaotic dynamical systems. 
+Poltergeist is a package for quick, accurate and abstract approximation of statistical properties of one-dimensional chaotic dynamical systems.
 
 It treats chaotic systems through the framework of spectral methods (i.e. transfer operator-based approaches to dynamical systems) and is numerically implemented via spectral methods (e.g. Fourier and Chebyshev). For the latter, Poltergeist relies on and closely interfaces with the adaptive function approximation package [ApproxFun](https://github.com/ApproxFun/ApproxFun.jl).  
 
@@ -24,7 +24,7 @@ Similarly, take a circle map, or maps defined by modulo or inverse:
 
 ```julia
 c = CircleMap(x->4x + sin(2pi*x)/2pi,PeriodicInterval(0,1))
-lanford = modulomap(x->2x+x*(1-x)/2,0..1)
+lanford = modulomap(x->2x+x*(1-x)/2,0..1) # Or call lanford()
 doubling = MarkovMap([x->x/2,x->(x+1)/2],[0..0.5,0.5..1],dir=Reverse)
 ```
 
@@ -40,9 +40,11 @@ L = Transfer(M)
 f0 = Fun(x->sin(3pi*x),d) #ApproxFun function
 f1 = L*f0
 g = ((2I-L)\f0)'
-eigvals(L,30)
 det(I-4L) # Fredholm determinant
-``` 
+
+using Plots
+scatter(eigvals(L,80))
+```
 
 In particular, you can solve for many statistical properties, many of which Poltergeist has built-in commands for. Most of these commands allow you to use the ```MarkovMap``` directly (bad, zero caching between uses), transfer operator (caches transfer operator entries, usually the slowest step), or the ```SolutionInv``` operator (caches QR factorisation as well).
 
@@ -54,12 +56,10 @@ birkhoffvar(K,Fun(x->x^2,d))
 birkhoffcov(K,Fun(x->x^2,d),Fun(identity,d))
 dρ = linearresponse(K,Fun(sinpi,d))
 
-using Plots
 plot(ρ)
 ε = 0.05
 plot!(ρ + ε*dρ,title="Linear response")
-pertε(func) = x-> func(x) + ε*sinpi(func(x))
-plot!(acim(MarkovMap([pertε(f1),pertε(f2)],[0..0.5,0.5..1])))
+plot!(acim(perturb(M,sinpi,ϵ)))
 ```
 <!--- TODO: plot!(linearresponse(L,Fun(x->x*(1-x),d))) --->
 <img src=https://github.com/johnwormell/Poltergeist.jl/raw/master/images/acim.png width=500>
@@ -74,7 +74,7 @@ This package is based on academic work. If you find this package useful in your 
 
 
 <!---
-* J. P. Wormell (2017 in preparation), Fast numerical methods for intermittent systems 
+* J. P. Wormell (2017 in preparation), Fast numerical methods for intermittent systems
 
 
 _____________
