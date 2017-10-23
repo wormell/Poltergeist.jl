@@ -136,7 +136,8 @@ NI = 10^6; NB = 10^3
 @time ts = timeseries(M1f,NI,ρ1f)
 println("Should be ≤4s")
 println("Time series:")
-display(ts')
+println(ts[1:11])
+println(ts[end-10:end])
 @test abs(sum(sin.(sinpi.(2ts)))/NI #- sum(ρ1f*A1)  # which is 0
       )< (4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
 
