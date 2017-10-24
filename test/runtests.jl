@@ -134,16 +134,15 @@ pts = points(space(ρ2bi),100)
 println("Time series tests")
 NI = 10^6; NB = 10^3
 @time ts = timeseries(M1f,NI,ρ1f)
-println("Should be ≤4s")
-println("Time series:")
-println(ts[1:11])
-println(ts[end-10:end])
+println("Should be ≤2s")
+# println(ts[1:11])
+# println(ts[end-10:end])
 @test abs(sum(sin.(sinpi.(2ts)))/NI #- sum(ρ1f*A1)  # which is 0
       )< (4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
 
 @time cts = timehist(M2f,NI,NB,ρ2f)
 @test abs(sum(sin.(sin.(2pi*cts[1][1:end-1])).*cts[2])/NI - sum(ρ2f*A2))< 1/NB+(4sum(cs1f*A1)+200eps(1.))/sqrt(NI)
-println("Should be ≤27s")
+println("Should be ≤2s")
 
 #TODO: fix
 # # Intermittent maps

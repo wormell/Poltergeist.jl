@@ -7,23 +7,23 @@ function map_n(m::AbstractMarkovMap,x::Number,n::Integer)
   y
 end
 
-function timeseries_init{T}(m::AbstractMarkovMap,n::Integer,xinit::T)
+function timeseries_initialvalue{T}(m::AbstractMarkovMap,n::Integer,xinit::T)
   @assert domain(m) == rangedomain(m)
   x_ts = Array{T}(n)#randn(n)*eps(T)
   x_ts[1] = xinit
   x = copy(xinit)
   for i = 2:n
     x = m(x)#*(1+x_ts[i])
-    x_ts[i] += x
+    x_ts[i] = x
   end
   x_ts
 end
-timeseries(m::AbstractMarkovMap,n::Integer;x0=map_n(m,rand(domain(m)),10^4)) = timeseries_init(m,n,x0)
+timeseries(m::AbstractMarkovMap,n::Integer;x0=map_n(m,rand(domain(m)),10^4)) = timeseries_initialvalue(m,n,x0)
 samplable(ρ::Fun) = isa(domain(ρ),IntervalDomain) ? ρ : Fun(ρ,Segment(domain(ρ)))
-timeseries(m::AbstractMarkovMap,n::Integer,ρ::Fun) = timeseries_init(m,n,sample(samplable(ρ)))
+timeseries(m::AbstractMarkovMap,n::Integer,ρ::Fun) = timeseries_initialvalue(m,n,sample(samplable(ρ)))
 
 
-function timehist_init{T}(m::AbstractMarkovMap,n::Integer,nbins::Integer,xinit::T)
+function timehist_initialvalue{T}(m::AbstractMarkovMap,n::Integer,nbins::Integer,xinit::T)
   @assert domain(m) == rangedomain(m)
   bin_start = domain(m).a
   bin_step = (domain(m).b-domain(m).a)/nbins
@@ -36,5 +36,5 @@ function timehist_init{T}(m::AbstractMarkovMap,n::Integer,nbins::Integer,xinit::
 
   bin_start:bin_step:domain(m).b,x_hist
 end
-timehist(m::AbstractMarkovMap,n::Integer,nbins::Integer;x0=map_n(m,rand(domain(m)),10^4)) = timehist_init(m,n,nbins,x0)
-timehist(m::AbstractMarkovMap,n::Integer,nbins::Integer,ρ::Fun) = timehist_init(m,n,nbins,sample(samplable(ρ)))
+timehist(m::AbstractMarkovMap,n::Integer,nbins::Integer;x0=map_n(m,rand(domain(m)),10^4)) = timehist_initialvalue(m,n,nbins,x0)
+timehist(m::AbstractMarkovMap,n::Integer,nbins::Integer,ρ::Fun) = timehist_initialvalue(m,n,nbins,sample(samplable(ρ)))
