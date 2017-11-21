@@ -183,7 +183,7 @@ function logMA_process(L,A::Fun)
   # logMA = Fun(sp,
   # coefficients(Fun(x->log(abs(Corfn(e^(im*x)))),CosSpace())))/2
 
-  logMA = Fun(Taylor(),coefficients(log(Corfn)))/2
+  logMA = Fun(Taylor(),coefficients(log(Corfn))/2)
 end
 
 function MA_process(L,A::Fun)

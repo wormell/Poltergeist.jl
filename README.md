@@ -7,14 +7,14 @@ Poltergeist is a package for quick, accurate and abstract approximation of stati
 
 It treats chaotic systems through the framework of spectral methods (i.e. transfer operator-based approaches to dynamical systems) and is numerically implemented via spectral methods (e.g. Fourier and Chebyshev). For the latter, Poltergeist relies on and closely interfaces with the adaptive function approximation package [ApproxFun](https://github.com/ApproxFun/ApproxFun.jl).  
 
-The use of highly accurate Fourier and Chebyshev approximations, means that we have spectral convergence rates: one can calculate acims to 15 digits of accuracy in a fraction of a second.
+The use of highly accurate Fourier and Chebyshev approximations means spectrally fast convergence: one can calculate acims to 15 digits of accuracy in a fraction of a second.
 
 As an example, take your favourite Markov interval map and give it digital form:
 
 ```julia
 using Poltergeist, ApproxFun
 d = Segment(0,1)
-f1 = 2x+sin(2pi*x)/8; f2(x) = 2-2x
+f1 = 2x+sin(2pi*x)/6; f2(x) = 2-2x
 f = MarkovMap([f1,f2],[0..0.5,0.5..1])
 f(0.25), f'(0.25)
 ```
@@ -25,7 +25,7 @@ Similarly, take a circle map, or maps defined by modulo or inverse:
 ```julia
 c = CircleMap(x->4x + sin(2pi*x)/2pi,PeriodicInterval(0,1))
 lanford = modulomap(x->2x+x*(1-x)/2,0..1) # Or call lanford()
-doubling = MarkovMap([x->x/2,x->(x+1)/2],[0..0.5,0.5..1],dir=Reverse)
+doubling = MarkovMap([x->x/2,x->(x+1)/2],[0..0.5,0.5..1],dir=Reverse) # or doubling(0..1)
 ```
 
 <!---For better performance, use generic (vs anonymous) functions and (if using a complicated function) supply a derivative:
@@ -36,7 +36,7 @@ complicatedfun(x) = 3x+sum(2^(-33/8)m)
 Calling ```Transfer``` on an ```AbstractMarkovMap``` type automatically creates an ApproxFun ```Operator```, with which you can do (numerically) all the kinds of things one expects from linear operators on function spaces:
 
 ```julia
-L = Transfer(M)
+L = Transfer(f)
 f0 = Fun(x->sin(3pi*x),d) #ApproxFun function
 f1 = L*f0
 g = ((2I-L)\f0)'

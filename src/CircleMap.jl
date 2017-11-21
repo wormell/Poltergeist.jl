@@ -87,7 +87,7 @@ end
 # autodiff
 # FwdCircleMap(f,d,r=d;diff=autodiff(f,d)) = FwdCircleMap(f,diff,d,r);
 # RevCircleMap(f,d,r=d;diff=autodiff(f,r)) = RevCircleMap(f,diff,d,r);
-CircleMap(f,d,r=d;dir=Forward,diff=autodiff(f,dir=Forward ? d : r)) = dir == Forward ?
+CircleMap(f,d,r=d;dir=Forward,diff=autodiff(f,dir==Forward ? d : r)) = dir == Forward ?
   FwdCircleMap(f,d,r,diff) : RevCircleMap(f,d,r,diff)
 
 MarkovMap(m::FwdCircleMap) = modulomap(m.f,m.domain,m.rangedomain,m.dfdx)

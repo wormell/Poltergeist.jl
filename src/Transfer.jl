@@ -76,7 +76,7 @@ transferfunction_nodes{TT,D,R,M<:AbstractMarkovMap}(L::ConcreteTransfer{TT,D,R,M
 
 
 function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range,padding::Bool=false)
-  #T = eltype(markovmap(L))
+  Tr = real(T)
   dat = Array{T}(0)
   cols = Array{eltype(k)}(Base.length(k)+1)
   cols[1] = 1
@@ -91,11 +91,11 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
     kind > 1 && (mc = max(mc,maximum(L.colstops[k[kind-1]+1:kk])))
 
     #    f(x) = transferfunction(x,L,kk,T)
-    tol =T==Any?200eps():200eps(T)
+    tol =Tr==Any?200eps():200eps(Tr)
 
     if L.colstops[kk] >= 1
       coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow2(L.colstops[kk])),kk,T))[1:L.colstops[kk]]
-      maxabsc = max(maximum(abs.(coeffs)),one(T))
+      maxabsc = max(maximum(abs.(coeffs)),one(Tr))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs)))
     elseif L.colstops[kk]  == 0
       coeffs = zeros(T,1)
@@ -116,12 +116,12 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       while logn < 21
         coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
 
-        maxabsc = max(one(T),maximum(abs.(coeffs)))
+        maxabsc = max(one(Tr),maximum(abs.(coeffs)))
         if maxabsc == 0 && maxabsfr == 0
           coeffs = zeros(T,1)
           break
         else
-          maxabsfr = max(maxabsfr,one(T))
+          maxabsfr = max(maxabsfr,one(Tr))
           b = ApproxFun.block(rs,length(coeffs))
           bs = ApproxFun.blockstart(rs,max(div(2b,3),1))
           if length(coeffs) > 8 && maximum(abs.(coeffs[bs:end])) < 20tol*maxabsc*logn &&
