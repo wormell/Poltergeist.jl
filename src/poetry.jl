@@ -35,7 +35,8 @@ perturb(d::PeriodicDomain,X,ϵ) = FwdCircleMap([x->x+ϵ*X(x)],d)
 perturb(m::AbstractMarkovMap,X,ϵ) = perturb(rangedomain(m),X,ϵ)∘m
 
 # Eigvals overloads
-eigvals(m::AbstractMarkovMap,n) = eigvals(Transfer(m),n)
+eigvals(m::AbstractMarkovMap,n::Int64) = eigvals(Transfer(m),n)
+eigs(m::AbstractMarkovMap,n::Int64) = eigs(Transfer(m),n)
 
 # # plotting
 # function plot(m::MarkovMap)

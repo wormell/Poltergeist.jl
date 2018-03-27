@@ -92,6 +92,15 @@ println("Should be ≤0.01s")
 # @time lanpet = acim(lanpet)
 # @time lyapunov(lanpet)
 
+# Eigvals test
+println("Eigenvalue test")
+c = 1/π
+intervalmap = MarkovMap([x->sin(c*asin(x)),x->sin(c+(1-c)*asin(x))],[0..sin(c),sin(c)..sin(1.)],dir=Reverse)
+eigs(intervalmap,100)
+@time evs = eigvals(intervalmap,100)
+println(length(evs))
+@assert all(abs.(sort(evs,by=abs,rev=true)[1:5] - (c.^(1:5) + (1-c).^(1:5))).<1e-7)
+
 # Correlation sums
 println("Correlation sum test")
 A1 = Fun(x->sin(sin(2pi*x)),d1)
