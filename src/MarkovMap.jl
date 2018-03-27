@@ -9,12 +9,12 @@ Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(dom
 # Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
 
 
-@compat struct MarkovMap{D<:Domain,R<:Domain,B<:MarkovBranch} <: AbstractMarkovMap{D,R}
+@compat struct MarkovMap{D<:Domain,R<:Domain,B<:ExpandingBranch} <: AbstractMarkovMap{D,R}
   branches::AbstractVector{B}
   domain::D
   rangedomain::R
   @compat function MarkovMap{D,R,B}(branches::AbstractVector{B},dom::D,ran::R) where
-          {B<:MarkovBranch, D<:Domain, R<:Domain}
+          {B<:ExpandingBranch, D<:Domain, R<:Domain}
     @assert all(b->issubset(b.domain,dom),branches)
     @assert all(b->(b.rangedomain == ran),branches)
     # for i = 1:length(branches)
@@ -28,7 +28,7 @@ Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(dom
 end
 MarkovMap(branches::AbstractVector,dom,ran) = MarkovMap(branches,Domain(dom),Domain(ran))
 
-function MarkovMap{B<:MarkovBranch}(branches::AbstractVector{B},dom,ran)
+function MarkovMap{B<:ExpandingBranch}(branches::AbstractVector{B},dom,ran)
   domd = Domain(dom); randm = Domain(ran)
   MarkovMap{typeof(domd),typeof(randm),B}(branches,domd,randm)
 end
@@ -149,68 +149,10 @@ end
 
 
 
-
-# Inducing
-
-@compat struct InducedMarkovMap{M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
-  m::M
-  b::B
-  domain::D
-  rangedomain::R
-  function InducedMarkovMap{M,B,D,R}(m::M,b::B,dom::D,ran::R) where {M<:MarkovMap,B<:MarkovBranch,D<:Domain,R<:Domain} #requires m,b: their domains -> m ∪ b
-    @assert dom == ran
-    @assert domain(m) == dom
-    @assert rangedomain(b) == rangedomain(m)
-    @assert domain(m) == setdiff(rangedomain(m),domain(b))
-    new(m,b,dom,ran)
-  end
-end
-InducedMarkovMap(m::MarkovMap,b::MarkovBranch,dom::Domain,ran::Domain) =
-  InducedMarkovMap{typeof(m),typeof(b),typeof(dom),typeof(ran)}(m,b,dom,ran)
-
-function mapinduceP(b::MarkovBranch,x) #hack
-  y = copy(x)
-  dy = one(y)
-  while in(y,b.domain)
-    p = unsafe_mapP(b,y)
-    y == p[1] && error("Map cannot be induced at this point as a fixed point is in its forward orbit")
-    y = p[1]
-    dy *= p[2]
-  end
-  (y,dy)
-end
-mapinduce(b::MarkovBranch,x) = mapinduceP(b,x)[1]
-mapinduceD(b::MarkovBranch,x) = mapinduceP(b,x)[2]
-
-
-function induce(m::MarkovMap,n::Integer)
-  @assert domain(m) == rangedomain(m)
-  b = m.branches[n]
-  dom = setdiff(m.domain,b.domain)
-  InducedMarkovMap(MarkovMap(m.branches[setdiff(1:nbranches(m),n)],dom,m.rangedomain),b,dom,dom)
-end
-nneutral(m::InducedMarkovMap) = nneutral(m.m) # if your maps stop being uniformly expanding this is bad
-
-function mapP(m::InducedMarkovMap,x)
-  y = mapP(m.m,x)
-  if in(y[1],domain(m.b))
-    a = mapinduceP(m.b,y[1])
-    y = [a[1],y[2]*a[2]]
-  end
-  y
-end
-(m::InducedMarkovMap)(x) = mapP(m,x)[1]
-mapD(m::InducedMarkovMap,x) = mapP(m,x)[2]
-
-
-
-
 # Domain calls
 
-for TYP in (:MarkovMap,:InducedMarkovMap)
-  @eval ApproxFun.domain(m::$TYP) = m.domain
-  @eval rangedomain(m::$TYP) = m.rangedomain
-end
+ApproxFun.domain(m::MarkovMap) = m.domain
+rangedomain(m::MarkovMap) = m.rangedomain
 
 
 

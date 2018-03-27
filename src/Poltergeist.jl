@@ -13,12 +13,11 @@ export (..), Segment, PeriodicInterval, Fun
 temp_in(x,dom) = (x >= dom.a) && (x <= dom.b)
 
 include("general.jl")
-include("MarkovBranch.jl")
+include("ExpandingBranch.jl")
 include("MarkovMap.jl")
 include("CircleMap.jl")
 include("ComposedMaps.jl")
 include("Transfer.jl")
-include("InducedTransfer.jl")
 include("Solution.jl")
 include("TimeSeries.jl")
 include("conjugacy.jl")

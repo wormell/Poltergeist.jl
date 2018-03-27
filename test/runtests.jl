@@ -120,15 +120,15 @@ test_x = [Poltergeist.mapinv(M2b,1,tf) for tf in test_f]
  @test M1b.(test_x) ≈ test_f
  @test M2b'.(test_x) ≈ M1b'.(test_x)
 
-#Inducing
-println("Inducing tests 🐴")
-M2bd = MarkovMap([fv1,fv2],[0..0.5,0.5..1],d2,dir=Reverse,diff=[fv1d,fv2d]);
-M2bi = induce(M2bd,1)
-# acim(M2bi)
-@time ρ2bi = acim(M2bi); println("Should be ≤4s")
-pts = points(space(ρ2bi),100)
- normi = diff(cumsum(ρ2b).(∂(domain(M2bi))))[1]
-@test all(ρ2bi.(pts) .≈ ρ2b.(pts)/normi)# < 1000eps(1.)
+# #Inducing
+# println("Inducing tests 🐴")
+# M2bd = MarkovMap([fv1,fv2],[0..0.5,0.5..1],d2,dir=Reverse,diff=[fv1d,fv2d]);
+# M2bi = induce(M2bd,1)
+# # acim(M2bi)
+# @time ρ2bi = acim(M2bi); println("Should be ≤4s")
+# pts = points(space(ρ2bi),100)
+#  normi = diff(cumsum(ρ2b).(∂(domain(M2bi))))[1]
+# @test all(ρ2bi.(pts) .≈ ρ2b.(pts)/normi)# < 1000eps(1.)
 
 # Time series
 println("Time series tests")

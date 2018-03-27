@@ -1,26 +1,26 @@
 export perturb
 
 # Markov derivatives
-@compat struct MarkovBranchDerivative{B<:MarkovBranch}
+@compat struct ExpandingBranchDerivative{B<:ExpandingBranch}
   b::B
 end
-(bd::MarkovBranchDerivative)(x::Number) = mapD(bd.b,x)
-Base.ctranspose(b::MarkovBranch) = MarkovBranchDerivative(b)
-# Base.transpose(b::MarkovBranch) = MarkovBranchDerivative(b)
+(bd::ExpandingBranchDerivative)(x::Number) = mapD(bd.b,x)
+Base.ctranspose(b::ExpandingBranch) = ExpandingBranchDerivative(b)
+# Base.transpose(b::ExpandingBranch) = ExpandingBranchDerivative(b)
 
-@compat struct MarkovBranchInverse{B<:MarkovBranch}
+@compat struct ExpandingBranchInverse{B<:ExpandingBranch}
   b::B
 end
-(bi::MarkovBranchInverse)(x::Number) = mapinv(bi.b,x)
-inv(b::MarkovBranch) = MarkovBranchInverse(b)
-## TODO one day: convert routine to MarkovBranch?
+(bi::ExpandingBranchInverse)(x::Number) = mapinv(bi.b,x)
+inv(b::ExpandingBranch) = ExpandingBranchInverse(b)
+## TODO one day: convert routine to ExpandingBranch?
 
-@compat struct MarkovBranchDerivativeInverse{B<:MarkovBranch}
+@compat struct ExpandingBranchDerivativeInverse{B<:ExpandingBranch}
   b::B
 end
-(bi::MarkovBranchDerivativeInverse)(x::Number) = mapinvD(bd.b,x)
-Base.ctranspose(bi::MarkovBranchInverse) = MarkovBranchDerivativeInverse(bi.b)
-# Base.transpose(b::MarkovBranch) = MarkovBranchDerivative(b)
+(bi::ExpandingBranchDerivativeInverse)(x::Number) = mapinvD(bd.b,x)
+Base.ctranspose(bi::ExpandingBranchInverse) = ExpandingBranchDerivativeInverse(bi.b)
+# Base.transpose(b::ExpandingBranch) = ExpandingBranchDerivative(b)
 
 @compat struct MarkovMapDerivative{M<:AbstractMarkovMap}
   m::M

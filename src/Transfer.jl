@@ -123,7 +123,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
         else
           maxabsfr = max(maxabsfr,one(Tr))
           b = ApproxFun.block(rs,length(coeffs))
-          bs = ApproxFun.blockstart(rs,max(div(2b,3),1))
+          bs = ApproxFun.blockstart(rs,max(div(2Integer(b),3),1))
           if length(coeffs) > 8 && maximum(abs.(coeffs[bs:end])) < 20tol*maxabsc*logn &&
               all(kkk->norm(Fun(rs,coeffs)(r[kkk])-fr[kkk],1)<tol*length(coeffs)*maxabsfr*500,1:length(r))
             chop!(coeffs,tol*maxabsc*logn)
