@@ -44,6 +44,13 @@ Base.zero(p::InterpolationNode) = zero(eltype(p))
 interval_mod(x,a,b) = (b-a)*mod((x-a)/(b-a),1)+a
 domain_mod(x,p::PeriodicInterval) = interval_mod(x,p.a,p.b)
 
+# Interval domains
+
+coveringsegment{T<:Domain}(dsm::AbstractArray{T}) = Segment(minimum(first(Domain(d)) for d in dsm),maximum(last(Domain(d)) for d in dsm))
+coveringsegment(ds::AbstractArray) = coveringsegment([Domain(d) for d in ds])
+mapinterval(f,d::Domain) = Interval(extrema((f(first(d)),f(last(d))))...)
+mapinterval(f,d) = mapinterval(f,Domain(d))
+
 # Newton's method
 
 domain_newton{U}(f,df,y::U,D::Domain,x::U=convert(U,rand(D)),tol=400eps(eltype(U))) = basic_newton(f,df,y,x,tol)

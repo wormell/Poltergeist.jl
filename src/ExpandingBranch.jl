@@ -1,8 +1,9 @@
 export NeutralBranch
 
 # ExpandingBranch
+@compat abstract type AbstractBranch{D<:Domain,R<:Domain}; end
 
-@compat abstract type ExpandingBranch{D<:Domain,R<:Domain}; end
+@compat abstract type ExpandingBranch{D<:Domain,R<:Domain} <: AbstractBranch{D,R}; end
 
 Base.summary(b::ExpandingBranch) =  string(typeof(b).name.name)*":"*string(domain(b))*"↦"*string(rangedomain(b)) #branches??
 Base.eltype(b::ExpandingBranch) = eltype(rangedomain(b))
