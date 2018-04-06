@@ -64,13 +64,21 @@ unsafe_mapinv(b::RevExpandingBranch,x) = b.v(x)
 unsafe_mapinvD(b::RevExpandingBranch,x) = b.dvdx(x)
 unsafe_mapinvP(b::RevExpandingBranch,x) = (unsafe_mapinv(b,x),unsafe_mapinvD(b,x))
 
-for (M,UNS_M) in ((:mapinv,:unsafe_mapinv),(:mapinvD,:unsafe_mapinvD),(:mapinvP,:unsafe_mapinvP)),
-    B in (FwdExpandingBranch,RevExpandingBranch)
-  @eval $M(b::$B,x) = begin @assert in(x,rangedomain(b)); $UNS_M(b,x); end
+for B in (FwdExpandingBranch,RevExpandingBranch)
+  for (M,UNS_M) in ((:mapinv,:unsafe_mapinv),(:mapinvD,:unsafe_mapinvD),(:mapinvP,:unsafe_mapinvP))
+    @eval $M(b::$B,x) = begin @assert in(x,rangedomain(b)); $UNS_M(b,x); end
+  end
+
+  # we are assuming that domains are unoriented
+  @eval (b::$B)(x::Segment) = Segment(sort(b.(∂(x)))...)
+  #@eval (b::$B)(x::Interval) = Interval(sort(b.(extrema(x)))...)
 end
 
+mapinv(b::ExpandingBranch,x::Segment) = Segment((mapinv.(b,∂(x)))...)
+# mapinv(b::ExpandingBranch,x::Interval) = Interval(sort(mapinv.(b,extrema(x)))...)
 
-# UNDE CONSTRUCTION: NeutralBranch
+
+# UNDER CONSTRUCTION: NeutralBranch
 @compat struct NeutralBranch
 end
 
