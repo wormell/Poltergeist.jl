@@ -1,11 +1,12 @@
 module Poltergeist
-  using Base, ApproxFun, BandedMatrices, Compat, DualNumbers, StaticArrays, IntervalSets#, PyPlot#, FastTransforms
+  using Base, ApproxFun, BandedMatrices, Compat, DualNumbers
+  using StaticArrays, IntervalSets, LightGraphs#, PyPlot#, FastTransforms
 
 import Base: values,getindex,setindex!,*,.*,+,.+,-,.-,==,<,<=,>,|,
   >=,./,/,.^,^,\,∪,∘,transpose, size, length,  eltype, inv, mod, convert,#issymmetric,
-  eigvals, eigs
+  eigvals, eigs, show
 import ApproxFun: domainspace, rangespace, domain, israggedbelow, RaggedMatrix,
-  resizedata!, colstop, CachedOperator, Infinity, IntervalDomain,
+  resizedata!, colstop, CachedOperator, Infinity, IntervalDomain, UnionDomain,
   fromcanonicalD, tocanonicalD, fromcanonical, tocanonical, space
 
 export (..), Segment, PeriodicInterval, Fun
@@ -18,6 +19,9 @@ include("ExpandingBranch.jl")
 include("IntervalMap.jl")
 include("CircleMap.jl")
 include("ComposedMaps.jl")
+# include("HGraphs.jl")
+# include("hofbauerextension.jl")
+# include("InducedMap.jl")
 include("Transfer.jl")
 include("Solution.jl")
 include("TimeSeries.jl")

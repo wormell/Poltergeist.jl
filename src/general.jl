@@ -1,4 +1,7 @@
 export rangedomain, Forward, Reverse
+
+_NI(x) = error("not implemented: $x")
+
 rangedomain(op::Operator) = domain(rangespace(op))
 
 containstransfer(M::Operator) = ApproxFun.iswrapper(M::Operator) && containstransfer(M.op)

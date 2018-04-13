@@ -6,9 +6,19 @@ export MarkovMap, IntervalMap, branch, nbranches, modulomap, induce, CircleMap
 # @compat abstract type AbstractMarkovMap{D<:Domain,R<:Domain} end# <: Function
 #abstract AbstractDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: AbstractMarkovMap{D,R,T,FF}
 
-Base.summary(m::AbstractIntervalMap) =  string(typeof(m).name.name)*":"*string(domain(m))*"↦"*string(rangedomain(m))*" with $(nbranches(m)) branches" #branches??
+Base.show(io::IO, m::AbstractIntervalMap) = print(io, string(typeof(m).name.name)*
+    " "*string(domain(m))*"→"*string(rangedomain(m))*"with $(nbranches(m)) branches") #branches??
 # Base.eltype(m::AbstractMarkovMap) = eltype(rangedomain(m))
 # Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
+
+# Domain calls
+
+ApproxFun.domain(m::AbstractIntervalMap) = m.domain
+rangedomain(m::AbstractIntervalMap) = m.rangedomain
+
+# suppose you can only put nfps in a map, in general (<== What does this mean??)
+containsnfp(d,m) = any(neutralfixedpoints(m) .∈ d)
+neutralfixedpoints(m::AbstractIntervalMap) = 0
 
 
 @compat struct MarkovMap{D<:Domain,R<:Domain,B<:ExpandingBranch} <: AbstractMarkovMap{D,R}
@@ -70,68 +80,65 @@ function IntervalMap(fs::AbstractVector,ds::AbstractVector,
           ran=coveringsegment([mapinterval(fs[i],ds[i]) for i in eachindex(fs)]);dir=Forward,
           diff=[autodiff(fs[i],(dir==Forward ? ds[i] : ran)) for i in eachindex(fs)])
   @assert length(fs) == length(ds)
-  randm=Domain(ran)
-  IntervalMap([branch(fs[i],Domain(ds[i]),randm,diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
+  @assert all(issubset(mapinterval(fs[i],ds[i]),ran) for i in eachindex(fs))
+  IntervalMap([branch(fs[i],Domain(ds[i]),mapinterval(fs[i],ds[i]),diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
         coveringsegment(ds),Domain(ran))
 end
 
-const BranchedMap{D<:Domain,R<:Domain} = Union{MarkovMap{D,R},IntervalMap{D,R}} #?? ComposedMap
+const SimpleBranchedMap{D<:Domain,R<:Domain,B<:AbstractBranch} = Union{MarkovMap{D,R,B},IntervalMap{D,R,B}} #?? ComposedMap
 
+for FUN in (:mapD,:mapP)
+ @eval $FUN(m::SimpleBranchedMap,x) = $FUN(m.branches[getbranchind(m,x)],x)
+end
+for FUN in (:mapD,:mapP,:mapinv,:mapinvD,:mapinvP)
+  @eval $FUN(m::SimpleBranchedMap,i::Integer,x) = $FUN(m.branches[i],x)
+end
 for TYP = (:MarkovMap, :IntervalMap)
-  for FUN in (:mapD,:mapP)
-   @eval $FUN(m::$TYP,x) = $FUN(m.branches[getbranch(m,x)],x)
-  end
-  for FUN in (:mapD,:mapP,:mapinv,:mapinvD,:mapinvP)
-    @eval $FUN(m::$TYP,i::Integer,x) = $FUN(m.branches[i],x)
-  end
   @eval begin
     (m::$TYP)(i::Integer,x) = (m.branches[i])(x)
-    (m::$TYP)(x) = (m.branches[getbranch(m,x)])(x)
-
-    branches(m::$TYP) = m.branches
-    nbranches(m::$TYP) = length(m.branches)
-    eachbranchindex(m::$TYP) = 1:nbranches(m)
-
-    nneutral(m::$TYP) = sum([isa(b,NeutralBranch) for b in m.branches])
-    getbranch(m::$TYP,x) = temp_in(x,m.domain) ? findfirst([temp_in(x,domain(b)) for b in m.branches]) : error("DomainError: $x ∉ $(m.domain)")
-    getbranch(m::$TYP,x::IntervalDomain) = issubset(x,m.domain) ? findfirst([issubset(x,domain(b)) for b in m.branches]) : error("DomainError: $x ⊈ $(m.domain)")
-    getbranch(m::$TYP,x::Segment) = getbranch(m,Domain(x))
-
-    # Domain calls
-
-    ApproxFun.domain(m::$TYP) = m.domain
-    rangedomain(m::$TYP) = m.rangedomain
-
-    # Transfer function
-
-    function transferfunction(x,m::$TYP,f,T)
-      y = zero(eltype(x));
-      for b in branches(m)
-        y += transferbranch(x,b,f,T)
-      end;
-      y
-    end
-
-    function transferfunction_int(x,y,m::$TYP,sk,T)
-      q = zero(eltype(x));
-
-      for b in branches(m)
-        q += transferbranch_int(x,y,b,sk,T)
-      end;
-      q
-    end
+    (m::$TYP)(x) = (m.branches[getbranchind(m,x)])(x)
   end
+end
+
+branches(m::SimpleBranchedMap) = m.branches
+nbranches(m::SimpleBranchedMap) = length(m.branches)
+eachbranchindex(m::SimpleBranchedMap) = 1:nbranches(m)
+
+neutralfixedpoints(m::SimpleBranchedMap) = [nfp(b) for b in branches(m)[isa.(NeutralBranch,branches(m))]]
+nneutral(m::SimpleBranchedMap) = sum([isa(b,NeutralBranch) for b in m.branches])
+getbranchind(m::SimpleBranchedMap,x) = temp_in(x,m.domain) ? findfirst([temp_in(x,domain(b)) for b in m.branches]) : error("DomainError: $x ∉ $(m.domain)")
+getbranchind(m::SimpleBranchedMap,x::IntervalDomain) = issubset(x,m.domain) ? findfirst([issubset(x,domain(b)) for b in m.branches]) : error("DomainError: $x ⊈ $(m.domain)")
+getbranchind(m::SimpleBranchedMap,x::Segment) = getbranchind(m,Domain(x))
+branchindtype(m::SimpleBranchedMap) = Int
+
+# Transfer function
+
+function transferfunction(x,m::SimpleBranchedMap,f,T)
+  y = zero(eltype(x));
+  for b in branches(m)
+    y += transferbranch(x,b,f,T)
+  end;
+  y
+end
+
+function transferfunction_int(x,y,m::SimpleBranchedMap,sk,T)
+  q = zero(eltype(x));
+
+  for b in branches(m)
+    q += transferbranch_int(x,y,b,sk,T)
+  end;
+  q
 end
 
 # nice constructors
 
 # modulomap
 
-  @compat struct FwdOffset{F,T}
-    f::F
-    offset::T
-  end
-  (of::FwdOffset)(x) = of.f(x)-of.offset
+@compat struct FwdOffset{F,T}
+  f::F
+  offset::T
+end
+(of::FwdOffset)(x) = of.f(x)-of.offset
 
 function forwardmodulomap{ff}(f::ff,dom,ran=dom,diff=autodiff(f,dom))
   domd = Domain(dom); randm = Domain(ran)
@@ -164,6 +171,7 @@ end
 end
 (ov::RevOffset)(x) = ov.fn(x+ov.offset)
 
+reversemodulomap(args...) = _NI("reversemodulomap")
 # TODO
 # function reversemodulomap{ff}(v::ff,dom,ran=dom,diff=autodiff(v,dom);maxcover=10000)
 #   domd = Domain(dom); randm = Domain(ran)
