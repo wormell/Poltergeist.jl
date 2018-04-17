@@ -34,16 +34,13 @@ induce(m::AbstractIntervalMap,args...) = InducedMap(m)
 
 Base.show(io::IO, i::InducedMap) = print(io, "Induced map on $(i.domain)→$(i.rangedomain) of $(i.he.m)")
 
-map_inducing(b::AbstractBranch,x) = b(x)
-map_inducing(b::NeutralBranch,x) = _NI("map_inducing for NeutralBranch")
-
 function (im::InducedMap)(x;maxiter=10000)
     @assert x ∈ domain(im)
     m = getmap(im.he)
     graphind = im.d_ind
     for i = 1:maxiter
         bind = getbranchind(m,x)
-        x = map_inducing(branches(m)[bind],x)
+        x = maphb(branches(m)[bind],x)
         graphinds = searchsorted(im.he.fedgelist[graphind],HofbauerEdge(0,0,bind,false),by=branchind)
         isempty(graphinds) && error("reached end of generated Hofbauer extension at depth $(hdomains(im.he)[graphind].depth)")
         for g in graphinds
@@ -56,4 +53,34 @@ function (im::InducedMap)(x;maxiter=10000)
         graphind == im.r_ind && return x
     end
     error("reached max number of iterations: $maxiter")
+end
+
+function mapP(im::InducedMap,x;maxiter=10000)
+    @assert x ∈ domain(im)
+    m = getmap(im.he)
+    dx = one(typeof(x))
+    p = HofbauerPoint(x,im.d_ind)
+    for i = 1:maxiter
+        (p,ds) = mapP(im.he,p)
+        dx *= ds
+        p.graphind == im.r_ind && return (x, dx)
+    end
+    error("reached max number of iterations: $maxiter")
+end
+mapD(im::InducedMap,x;maxiter=10000) = mapP(im,x;maxiter=maxiter)[2]
+
+# transferfunction
+struct TransferBSFunction{F}
+    f::F
+end
+(q::TransferBSFunction)(v,dvdx,n) = dvdx*q.f(v)
+transferfunction(x,im::InducedMap,f) = BackSum(im)(TransferBSFunction(f),true)(x)
+
+struct TransferIntBSFunction{F}
+    f::F
+end
+(q::TransferIntBSFunction)(v,dvdx,n) = q.f(v)
+function transferfunction_int(x,y,im::InducedMap,f)
+    SQ = BackSum(im)(TransferIntBSFunction(cumsum(f)),true)
+    SQ(y) - SQ(x)
 end

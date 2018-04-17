@@ -151,7 +151,5 @@ end
 ne(g::HofbauerExtension) = g.ne
 nv(g::HofbauerExtension) = length(fedgelist(g))
 vertices(g::HofbauerExtension) = 1:nv(g)
-
-
 end
 using Poltergeist.HGraphs

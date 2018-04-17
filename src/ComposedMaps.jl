@@ -74,22 +74,21 @@ nneutral(C::ComposedMarkovMap) = 0 # assume we can't do this
 neutralfixedpoints(C::ComposedMarkovMap) = []
 
 #TODO: must be faster??
-function transferfunction{M<:AbstractMarkovMap}(x,m::ComposedMarkovMap{Tuple{M}},f,T)
-  transferfunction(x,m.maps[1],f,T)
+function transferfunction{M<:AbstractMarkovMap}(x,m::ComposedMarkovMap{Tuple{M}},f)
+  transferfunction(x,m.maps[1],f)
 end
 
-struct TransferCall{M<:AbstractMarkovMap,ff,T}
+struct TransferCall{M<:AbstractMarkovMap,ff}
   m::M
   f::ff
-  t::Type{T}
 end
-# TransferCall(m,f,T) = TransferCall{typeof(m),typeof(f),T}(m,f)
-(t::TransferCall)(x) = transferfunction(x,t.m,t.f,t.t)
+# TransferCall(m,f) = TransferCall{typeof(m),typeof(f),T}(m,f)
+(t::TransferCall)(x) = transferfunction(x,t.m,t.f)
 
-function transferfunction(x,m::ComposedMarkovMap,f,T)
+function transferfunction(x,m::ComposedMarkovMap,f)
   m2 = ComposedMarkovMap(m.maps[2:end],domain(m.maps[end]),rangedomain(m.maps[2]))
-  transferfunction(x,m.maps[1],#x->transferfunction(x,m2,f,T),T)
-    TransferCall(m2,f,T),T)
+  transferfunction(x,m.maps[1],#x->transferfunction(x,m2,f))
+    TransferCall(m2,f))
 end
 
 # TODO: transferfunction_int

@@ -34,13 +34,13 @@ InterpolationNode(sp::Space,k::Int,n::Int) = InterpolationNode{typeof(sp)}(sp,k,
 
 Base.convert{T<:Number}(::Type{T},p::InterpolationNode) = convert(T,points(p.sp,p.n)[p.k])
 Base.convert{S<:Space}(::Type{InterpolationNode{S}},p::InterpolationNode{S}) = p
-Base.promote_rule{T<:Number,S<:Space}(::Type{T},::Type{InterpolationNode{S}}) = promote_type(T,eltype(S))
+Base.promote_rule{T<:Number,S<:Space}(::Type{T},::Type{InterpolationNode{S}}) = promote_type(T,prectype(S))
 Base.show(p::InterpolationNode) = show(convert(Nu))
 ApproxFun.space(p::InterpolationNode) = p.sp
 ApproxFun.domain(p::InterpolationNode) = domain(p.sp)
-Base.eltype(p::InterpolationNode) = eltype(p.sp)
+ApproxFun.prectype(p::InterpolationNode) = prectype(p.sp)
 
-Base.zero(p::InterpolationNode) = zero(eltype(p))
+Base.zero(p::InterpolationNode) = zero(prectype(p))
 
 # Circle domains
 
@@ -166,9 +166,15 @@ end
   s::S
   k::II
 end
-(b::BasisFun)(x) = getbasisfun(x,sk,eltype(sk.s))
-getbasisfun(x,sk::BasisFun,T) = Fun(sk.s,[zeros(T,sk.k-1);one(T)])(x)
-getbasisfun_int(x,sk::BasisFun,T) = cumsum(Fun(sk.s,[zeros(T,sk.k-1);one(T)]))(x)
+(sk::BasisFun)(x) = getbasisfun(x,sk)
+getbasisfun(x,sk::BasisFun) = Fun(sk.s,[zeros(prectype(sk.s),sk.k-1);one(prectype(sk.s))])(x)
+getbasisfun_int(x,sk::BasisFun) = cumsum(Fun(sk.s,[zeros(prectype(sk.s),sk.k-1);one(prectype(sk.s))]))(x)
+
+@compat struct BasisFunInt{S<:Space,II<:Integer}
+  sk::BasisFun{S,II}
+end
+cumsum(sk::BasisFun) = BasisFunInt(sk)
+(ski::BasisFunInt)(x) = getbasisfun_int(ski.sk,x)
 
 #specialised getbasisfuns
 
@@ -178,8 +184,8 @@ function fourierCSk_int(x,d,k::Integer)
   (rem(k,2) == 1 ? -sin(fld(k,2)*tocanonical(d,x)) : cos(fld(k,2)*tocanonical(d,x)))/
     fld(k,2)/tocanonicalD(d,x)
 end
-getbasisfun{DD,K<:Integer}(x,sk::BasisFun{Fourier{DD},K},T) = fourierCSk(x,domain(sk.s),sk.k)
-getbasisfun_int{DD,K<:Integer}(x,sk::BasisFun{Fourier{DD},K},T) = fourierCSk_int(x,domain(sk.s),sk.k)
+getbasisfun{DD,K<:Integer}(x,sk::BasisFun{Fourier{DD},K}) = fourierCSk(x,domain(sk.s),sk.k)
+getbasisfun_int{DD,K<:Integer}(x,sk::BasisFun{Fourier{DD},K}) = fourierCSk_int(x,domain(sk.s),sk.k)
 
 chebyTk(x,d,k::Integer) = cos((k-1)*acos(tocanonical(d,x))) #roundoff error grows linearly(??) with k may not be bad wrt x too
 function chebyTk_int(x,d,k::Integer)
@@ -187,12 +193,12 @@ function chebyTk_int(x,d,k::Integer)
   k == 2 && return tocanonical(d,x)^2/2tocanonicalD(d,x)
   ((k-1)*chebyTk(x,d,k+1) - k*tocanonical(d,x)*chebyTk(x,d,k))/((k-1)^2-1)/tocanonicalD(d,x)
 end
-getbasisfun{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K},T) = chebyTk(x,domain(sk.s),sk.k)
-getbasisfun_int{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K},T) = chebyTk_int(x,domain(sk.s),sk.k)
+getbasisfun{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K}) = chebyTk(x,domain(sk.s),sk.k)
+getbasisfun_int{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K}) = chebyTk_int(x,domain(sk.s),sk.k)
 
-function getbasisfun{F<:TensorSpace,K<:Integer}(x,sk::BasisFun{F,K},T)
+function getbasisfun{F<:TensorSpace,K<:Integer}(x,sk::BasisFun{F,K})
   ks = ApproxFun.tensorizer(sk.s)[sk.k]
-  prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i]),T) for i = eachindex(sk.s.spaces))
+  prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i])) for i = eachindex(sk.s.spaces))
 end
 # no getbasisfun_int as you don't have antiderivatives
 

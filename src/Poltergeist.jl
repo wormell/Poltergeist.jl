@@ -7,7 +7,7 @@ import Base: values,getindex,setindex!,*,.*,+,.+,-,.-,==,<,<=,>,|,
   eigvals, eigs, show
 import ApproxFun: domainspace, rangespace, domain, israggedbelow, RaggedMatrix,
   resizedata!, colstop, CachedOperator, Infinity, IntervalDomain, UnionDomain,
-  fromcanonicalD, tocanonicalD, fromcanonical, tocanonical, space
+  fromcanonicalD, tocanonicalD, fromcanonical, tocanonical, space, prectype
 
 export (..), Segment, PeriodicInterval, Fun
 
@@ -22,6 +22,7 @@ include("ComposedMaps.jl")
 include("HGraphs.jl")
 include("hofbauerextension.jl")
 include("InducedMap.jl")
+include("BackSum.jl")
 include("Transfer.jl")
 include("Solution.jl")
 include("TimeSeries.jl")

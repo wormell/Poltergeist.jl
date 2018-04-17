@@ -113,19 +113,19 @@ branchindtype(m::SimpleBranchedMap) = Int
 
 # Transfer function
 
-function transferfunction(x,m::SimpleBranchedMap,f,T)
+function transferfunction(x,m::SimpleBranchedMap,f)
   y = zero(eltype(x));
   for b in branches(m)
-    y += transferbranch(x,b,f,T)
+    y += transferbranch(x,b,f)
   end;
   y
 end
 
-function transferfunction_int(x,y,m::SimpleBranchedMap,sk,T)
+function transferfunction_int(x,y,m::SimpleBranchedMap,sk)
   q = zero(eltype(x));
 
   for b in branches(m)
-    q += transferbranch_int(x,y,b,sk,T)
+    q += transferbranch_int(x,y,b,sk)
   end;
   q
 end

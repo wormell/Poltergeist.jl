@@ -89,7 +89,7 @@ end
 # RevCircleMap(f,d,r=d;diff=autodiff(f,r)) = RevCircleMap(f,diff,d,r);
 CircleMap(f,d,r=d;dir=Forward,diff=autodiff(f,dir==Forward ? d : r)) = dir == Forward ?
   FwdCircleMap(f,d,r,diff) : RevCircleMap(f,d,r,diff)
-  
+
 ncover(m::AbstractCircleMap) = m.cover
 eachbranchindex(m::AbstractCircleMap) = 1:m.cover
 
@@ -100,7 +100,7 @@ end
 
 # Transfer function
 
-function transferfunction(x,m::AbstractCircleMap,f,T)
+function transferfunction(x,m::AbstractCircleMap,f)
   y = zero(eltype(x));
   for b = 1:ncover(m)
     (v,dvdx) = mapinvP(m,b,x)
@@ -109,7 +109,7 @@ function transferfunction(x,m::AbstractCircleMap,f,T)
   y
 end
 
-function transferfunction_int(x,y,m::AbstractCircleMap,f,T)
+function transferfunction_int(x,y,m::AbstractCircleMap,f)
   q = zero(eltype(x));
   csf = cumsum(f)
   for b = 1:ncover(m)
@@ -120,20 +120,20 @@ function transferfunction_int(x,y,m::AbstractCircleMap,f,T)
   q
 end
 
-function transferfunction(x,m::AbstractCircleMap,sk::BasisFun,T)
+function transferfunction(x,m::AbstractCircleMap,sk::BasisFun)
   y = zero(eltype(x));
   for b = 1:ncover(m)
     (v,dvdx) = mapinvP(m,b,x)
-    y += abs(det(dvdx)).*getbasisfun(v,sk,T)
+    y += abs(det(dvdx)).*getbasisfun(v,sk)
   end
   y
 end
-function transferfunction_int(x,y,m::AbstractCircleMap,sk::BasisFun,T)
+function transferfunction_int(x,y,m::AbstractCircleMap,sk::BasisFun)
   q = zero(eltype(x));
   for b = 1:ncover(m)
     vy = mapinv(m,b,y); vx = mapinv(m,b,x)
     sgn = sign((vy-vx)/(y-x))
-    q += sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
+    q += sgn*(getbasisfun_int(vy,sk)-getbasisfun_int(vx,sk))
   end
   q
 end

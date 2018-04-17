@@ -140,7 +140,7 @@ end
 
 # Lyapunov exponent
 function lyapunov(f::AbstractMarkovMap,r=acim(f),sp=Space(rangedomain(f)))
-  sum(Fun(x->transferfunction(x,f,x->log(abs(f'(x)))*r(x),eltype(f)),sp))
+  sum(Fun(x->transferfunction(x,f,x->log(abs(f'(x)))*r(x)),sp))
 end
 function lyapunov(K::SolutionInvWrapper)
   L = Transfer(K)
@@ -155,12 +155,11 @@ end
 (lc::LyapContainer)(x) = log(abs(lc.m'(x)))*lc.tr(x)
 
 function lyapunov(f::ComposedMarkovMap,r=acim(f))#,sp=Space(rangedomain(f)))
-  T = eltype(f)
   tr = copy(r)
-  lyap = sum(Fun(x->transferfunction(x,f.maps[end],LyapContainer(f.maps[end],tr),T),rangedomain(f.maps[end])))
+  lyap = sum(Fun(x->transferfunction(x,f.maps[end],LyapContainer(f.maps[end],tr)),rangedomain(f.maps[end])))
   for k = complength(f)-1:-1:1
-    tr = Fun(x->transferfunction(x,f.maps[k+1],tr,T),rangedomain(f.maps[k+1]))
-    lyap += sum(Fun(x->transferfunction(x,f.maps[k],LyapContainer(f.maps[k],tr),T),rangedomain(f.maps[k])))
+    tr = Fun(x->transferfunction(x,f.maps[k+1],tr),rangedomain(f.maps[k+1]))
+    lyap += sum(Fun(x->transferfunction(x,f.maps[k],LyapContainer(f.maps[k],tr)),rangedomain(f.maps[k])))
   end
   lyap
 end
