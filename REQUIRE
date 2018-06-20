@@ -5,3 +5,4 @@ Compat 0.31.0
 DualNumbers 0.3.0
 StaticArrays 0.3
 IntervalSets 0.0.2
+LightGraphs 0.12
