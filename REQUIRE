@@ -5,4 +5,3 @@ Compat 0.48.0
 DualNumbers 0.3.0
 StaticArrays 0.3
 IntervalSets 0.0.2
-LinearAlgebra
