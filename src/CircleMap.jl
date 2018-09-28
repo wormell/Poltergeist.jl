@@ -11,7 +11,7 @@
   fa::T
   fb::T
 end
-function FwdCircleMap{D<:PeriodicDomain,R<:PeriodicDomain,ff,gg}(f::ff,domd::D,randm::R,dfdx::gg=autodiff(f,domd))
+function FwdCircleMap(f::ff,domd::D,randm::R,dfdx::gg=autodiff(f,domd)) where {D<:PeriodicDomain,R<:PeriodicDomain,ff,gg}
   # @assert isempty(∂(randm)) isempty(∂(domd))
   fa = f(first(domd)); fb = f(last(domd))
   cover_est = (fb-fa)/arclength(randm)
@@ -19,8 +19,8 @@ function FwdCircleMap{D<:PeriodicDomain,R<:PeriodicDomain,ff,gg}(f::ff,domd::D,r
   cover_est ≈ cover_integer || error("Circle map lift does not have integer covering number.")
   FwdCircleMap{D,R,ff,gg,typeof(fa)}(f,dfdx,domd,randm,abs(cover_integer),fa,fb)
 end
-function FwdCircleMap{ff,gg}(f::ff,dom,ran,dfdx::gg=autodiff(f,PeriodicDomain(dom)))
-  domd = PeriodicDomain(dom); randm = PeriodicDomain(ran)
+function FwdCircleMap(f::ff,dom,ran,dfdx::gg=autodiff(f,convert(PeriodicDomain,dom))) where {ff,gg}
+  domd = convert(PeriodicDomain,dom); randm = convert(PeriodicDomain,ran)
   FwdCircleMap{typeof(domd),typeof(randm),ff,gg}(f,domd,randm,dfdx)
 end
 
@@ -46,23 +46,23 @@ end
   va::T
   vb::T
 end
-function RevCircleMap{D<:Domain,R<:Domain,ff,gg}(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm),maxcover=10000)
+function RevCircleMap(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm)) where {D<:Domain,R<:Domain,ff,gg}
   # @assert isempty(∂(ran)) isempty(∂(dom))
   ra = first(randm); va = v(ra)
   dr = arclength(randm); dd = arclength(domd)
   cover = 1; vr = v(ra+dr)-va
-  while (abs(vr) <= dd && cover < maxcover)
+  while (abs(vr) <= dd && cover < 10000)
     vr = v(ra+cover*dr)-va
     abs(vr) ≈ dd && break
     abs(vr) > dd && error("Inverse lift doesn't appear to have an inverse")
     cover += 1
   end
-  cover == maxcover && error("Can't get to the end of the inverse lift after 10000 steps")
+  cover == 10000 && error("Can't get to the end of the inverse lift after 10000 steps")
 
   RevCircleMap{D,R,ff,gg,typeof(va)}(v,dvdx,domd,randm,cover,va,v(last(randm)))
 end
-function RevCircleMap{ff,gg}(v::ff,dom,ran=dom,dvdx::gg=autodiff(v,ran))
-  domd = PeriodicDomain(dom); randm = PeriodicDomain(ran)
+function RevCircleMap(v::ff,dom,ran=dom,dvdx::gg=autodiff(v,ran)) where {ff,gg}
+  domd = convert(PeriodicDomain,dom); randm = convert(PeriodicDomain,ran)
   RevCircleMap{typeof(domd),typeof(randm),ff,gg}(v,domd,randm,dvdx)
 end
 
@@ -90,6 +90,8 @@ end
 CircleMap(f,d,r=d;dir=Forward,diff=autodiff(f,dir==Forward ? d : r)) = dir == Forward ?
   FwdCircleMap(f,d,r,diff) : RevCircleMap(f,d,r,diff)
 
+MarkovMap(m::FwdCircleMap) = modulomap(m.f,m.domain,m.rangedomain,m.dfdx)
+
 ncover(m::AbstractCircleMap) = m.cover
 eachbranchindex(m::AbstractCircleMap) = 1:m.cover
 
@@ -100,7 +102,7 @@ end
 
 # Transfer function
 
-function transferfunction(x,m::AbstractCircleMap,f)
+function transferfunction(x,m::AbstractCircleMap,f,T)
   y = zero(eltype(x));
   for b = 1:ncover(m)
     (v,dvdx) = mapinvP(m,b,x)
@@ -109,7 +111,7 @@ function transferfunction(x,m::AbstractCircleMap,f)
   y
 end
 
-function transferfunction_int(x,y,m::AbstractCircleMap,f)
+function transferfunction_int(x,y,m::AbstractCircleMap,f,T)
   q = zero(eltype(x));
   csf = cumsum(f)
   for b = 1:ncover(m)
@@ -120,20 +122,20 @@ function transferfunction_int(x,y,m::AbstractCircleMap,f)
   q
 end
 
-function transferfunction(x,m::AbstractCircleMap,sk::BasisFun)
+function transferfunction(x,m::AbstractCircleMap,sk::BasisFun,T)
   y = zero(eltype(x));
   for b = 1:ncover(m)
     (v,dvdx) = mapinvP(m,b,x)
-    y += abs(det(dvdx)).*getbasisfun(v,sk)
+    y += abs(det(dvdx)).*getbasisfun(v,sk,T)
   end
   y
 end
-function transferfunction_int(x,y,m::AbstractCircleMap,sk::BasisFun)
+function transferfunction_int(x,y,m::AbstractCircleMap,sk::BasisFun,T)
   q = zero(eltype(x));
   for b = 1:ncover(m)
     vy = mapinv(m,b,y); vx = mapinv(m,b,x)
     sgn = sign((vy-vx)/(y-x))
-    q += sgn*(getbasisfun_int(vy,sk)-getbasisfun_int(vx,sk))
+    q += sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
   end
   q
 end

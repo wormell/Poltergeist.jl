@@ -53,7 +53,7 @@ end
 show(io::IO, h::HofbauerExtension) = print(io,
     "Hofbauer extension of $(getmap(h)) of size {$(nv(h)), $(ne(h))}")
 
-eltype(x::HofbauerExtension) = Int # for graph compatibiltiy
+cfstype(x::HofbauerExtension) = Int # for graph compatibiltiy
 
 HofbauerExtension{I,D}(m::AbstractIntervalMap) where I where D = HofbauerExtension(0, Vector{HEdge{I}}[], Vector{HEdge{I}}[],m,D[],Int[])
 HofbauerExtension(m::AbstractIntervalMap) = HofbauerExtension{Int,Segment{Float64}}(m)

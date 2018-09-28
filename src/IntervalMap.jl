@@ -8,7 +8,7 @@ export MarkovMap, IntervalMap, branch, nbranches, modulomap, induce, CircleMap
 
 Base.show(io::IO, m::AbstractIntervalMap) = print(io, string(typeof(m).name.name)*
     " "*string(domain(m))*"→"*string(rangedomain(m))*"with $(nbranches(m)) branches") #branches??
-# Base.eltype(m::AbstractMarkovMap) = eltype(rangedomain(m))
+# cfstype(m::AbstractMarkovMap) = cfstype(rangedomain(m))
 # Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
 
 # Domain calls

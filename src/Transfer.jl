@@ -24,17 +24,18 @@ ApproxFun.israggedbelow(L::AbstractTransfer) = true
 end
 Transfer(stuff...;padding=false) = cache(ConcreteTransfer(stuff...),padding=padding)
 
-ConcreteTransfer{T}(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
-                    ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m))),colstops::Array{Int,1}=Int[]) =
+ConcreteTransfer(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
+                    ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m))),
+                    colstops::Array{Int,1}=Int[]) where T =
   ConcreteTransfer{T,typeof(dom),typeof(ran),typeof(m)}(m,dom,ran,colstops)#,domainspace(m),rangespace(m))
 ConcreteTransfer(m,dom::Space=Space(domain(m)),ran=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m))),colstops::Array{Int,1}=Int[]) =
-  ConcreteTransfer(prectype(rangedomain(m)),m,dom,ran)
+  ConcreteTransfer(eltype(eltype(rangedomain(m))),m,dom,ran)
 
 for OP in (:domainspace,:rangespace)
   @eval ApproxFun.$OP(L::ConcreteTransfer) = L.$OP
 end
 
-function Base.convert{T}(::Type{Operator{T}},D::ConcreteTransfer)
+function Base.convert(::Type{Operator{T}},D::ConcreteTransfer) where T
     if T==eltype(D)
         D
     else
@@ -61,24 +62,26 @@ end
 
 
 # Transfer a fun - TODO
-function transfer(m::AbstractIntervalMap,fn)
-  @inline tf(x) = transferfunction(x,m,fn)
+function transfer(m::AbstractMarkovMap,fn)
+  @inline tf(x) = transferfunction(x,m,fn,eltype(eltype(rangedomain(m))))
   Fun(tf,rangespace(m)) # TODO: MarkovMaps don't have spaces
 end
-transfer(m::AbstractIntervalMap,fn,x) = transferfunction(x,m,fn)
+transfer(m::MarkovMap,fn,x) = transferfunction(x,m,fn,eltype(rangedomain(m)))
 
 # Indexing
 
-transferfunction_nodes{TT,D,R,M<:AbstractIntervalMap}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk) =
-  prectype(domainspace(L))[transferfunction(p,markovmap(L),BasisFun(domainspace(L),kk)) for p in points(rangespace(L),n)]
-# transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk) =
-#   T[transferfunction(InterpolationNode(rangespace(markovmap(L)),k,n),markovmap(L),BasisFun(domainspace(L),kk)) for k = 1:n]
+transferfunction_nodes(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) where {TT,D,R,M<:AbstractMarkovMap} =
+  T[transferfunction(p,markovmap(L),BasisFun(domainspace(L),kk),T) for p in points(rangespace(L),n)]
+# transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
+#   T[transferfunction(InterpolationNode(rangespace(markovmap(L)),k,n),markovmap(L),BasisFun(domainspace(L),kk),T) for k = 1:n]
 
 
-function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},k::Range,padding::Bool=false)
+function transfer_getindex(L::ConcreteTransfer{T},
+    jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},
+    k::AbstractRange,padding::Bool=false) where T
   Tr = real(T)
-  dat = Array{T}(0)
-  cols = Array{eltype(k)}(Base.length(k)+1)
+  @compat dat = Array{T}(undef,0)
+  @compat cols = Array{eltype(k)}(undef,Base.length(k)+1)
   cols[1] = 1
   K = isfinite(jdat[3]) ? length(jdat[1]:jdat[2]:jdat[3]) : 0 # largest colstop
   padding && start(k) > 1 && (K = max(maximum([colstop(L,i) for i =1:start(k)-1]),K))
@@ -90,11 +93,11 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
   for (kind,kk) in enumerate(k)
     kind > 1 && (mc = max(mc,maximum(L.colstops[k[kind-1]+1:kk])))
 
-    #    f(x) = transferfunction(x,L,kk)
-    tol =Tr==Any?200eps():200eps(Tr)
+    #    f(x) = transferfunction(x,L,kk,T)
+    tol = (Tr==Any) ? 200eps() : 200eps(Tr)
 
     if L.colstops[kk] >= 1
-      coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow2(L.colstops[kk])),kk))[1:L.colstops[kk]]
+      @compat coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow(2,L.colstops[kk])),kk,T))[1:L.colstops[kk]]
       maxabsc = max(maximum(abs.(coeffs)),one(Tr))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs)))
     elseif L.colstops[kk]  == 0
@@ -109,12 +112,12 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       # ( the difference is we start at n \approx mc )
 
       r=ApproxFun.checkpoints(rs)
-      fr=[transferfunction(rr,markovmap(L),BasisFun(domainspace(L),kk)) for rr in r]
+      fr=[transferfunction(rr,markovmap(L),BasisFun(domainspace(L),kk),T) for rr in r]
       maxabsfr=norm(fr,Inf)
 
       logn = min(round(Int,log2(max(mc,16)),RoundUp),20)
       while logn < 21
-        coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk))
+        coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
 
         maxabsc = max(one(Tr),maximum(abs.(coeffs)))
         if maxabsc == 0 && maxabsfr == 0
@@ -135,7 +138,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
 
       if logn == 21
         warn("Maximum number of coefficients "*string(2^20+1)*" reached in constructing $(kk)th column.")
-        coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk))
+        coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
       end
 
     end
@@ -149,7 +152,7 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
       abs(coeffs[i])<tol*maxabsc*log2(lcfc)/10 && (coeffs[i] = 0)
     end
 
-    cutcfc = coeffs[(jdat[1]:jdat[2]:min(lcfc,jdat[3]))::Range]
+    cutcfc = coeffs[(jdat[1]:jdat[2]:min(lcfc,jdat[3]))::AbstractRange]
 
     K = max(K,length(cutcfc))
     padding && ApproxFun.pad!(cutcfc,K)
@@ -162,15 +165,15 @@ function transfer_getindex{T}(L::ConcreteTransfer{T},jdat::Tuple{Integer,Integer
   RaggedMatrix(dat,cols,K)
 end
 
-Base.getindex(L::ConcreteTransfer,j::Range,k::Range) = transfer_getindex(L,(start(j),step(j),last(j)),k)
-Base.getindex(L::ConcreteTransfer,j::Colon,k::Range) = transfer_getindex(L,(1,1,ApproxFun.∞),k)
-Base.getindex(L::ConcreteTransfer,j::ApproxFun.AbstractCount,k::Range) = transfer_getindex(L,(start(j),step(j),ApproxFun.∞),k)
+Base.getindex(L::ConcreteTransfer,j::AbstractRange,k::AbstractRange) = transfer_getindex(L,(start(j),step(j),last(j)),k)
+Base.getindex(L::ConcreteTransfer,j::Colon,k::AbstractRange) = transfer_getindex(L,(1,1,ApproxFun.∞),k)
+Base.getindex(L::ConcreteTransfer,j::ApproxFun.AbstractCount,k::AbstractRange) = transfer_getindex(L,(start(j),step(j),ApproxFun.∞),k)
 Base.getindex(L::ConcreteTransfer,j::Integer,k::Integer) = Base.getindex(L,j:j,k:k)[1,1]
-Base.getindex(L::ConcreteTransfer,j::Integer,k::Range) = Base.getindex(L,j:j,k).data
-Base.getindex(L::ConcreteTransfer,j::Range,k::Integer) = Base.getindex(L,j,k:k).data
+Base.getindex(L::ConcreteTransfer,j::Integer,k::AbstractRange) = Base.getindex(L,j:j,k).data
+Base.getindex(L::ConcreteTransfer,j::AbstractRange,k::Integer) = Base.getindex(L,j,k:k).data
 
 Base.convert(::Type{RaggedMatrix},S::ApproxFun.SubOperator{T,LL,Tuple{R1,R2}}) where
-        {T,LL<:AbstractTransfer,R1<:Union{Range,ApproxFun.AbstractCount},R2<:Range} =
+        {T,LL<:AbstractTransfer,R1<:Union{AbstractRange,ApproxFun.AbstractCount},R2<:AbstractRange} =
   Base.getindex(parent(S),parentindexes(S)[1],parentindexes(S)[2])
 
 
@@ -181,7 +184,8 @@ function ApproxFun.colstop(L::ConcreteTransfer,k::Integer)
   L.colstops[k]
 end
 
-function ApproxFun.resizedata!{T<:Number,CT<:ConcreteTransfer}(co::ApproxFun.CachedOperator{T,RaggedMatrix{T},CT},::Colon,n::Integer)
+function ApproxFun.resizedata!(co::ApproxFun.CachedOperator{T,RaggedMatrix{T},CT},
+    ::Colon,n::Integer) where {T<:Number,CT<:ConcreteTransfer}
   if n > co.datasize[2]
     RO = transfer_getindex(co.op,(1,1,ApproxFun.∞),(co.datasize[2]+1):n,co.padding)
     if co.datasize[2] == 0
@@ -189,7 +193,7 @@ function ApproxFun.resizedata!{T<:Number,CT<:ConcreteTransfer}(co::ApproxFun.Cac
       co.datasize = (co.data.m,n)
     else
       append!(co.data.data,RO.data)
-      append!(co.data.cols,RO.cols[2:end]+co.data.cols[end]-1)
+      append!(co.data.cols,RO.cols[2:end].+(co.data.cols[end]-1))
       co.data.m = max(co.data.m,RO.m)
       co.datasize = (co.data.m,n)
     end
@@ -198,7 +202,8 @@ function ApproxFun.resizedata!{T<:Number,CT<:ConcreteTransfer}(co::ApproxFun.Cac
   co
 end
 
-function ApproxFun.colstop{T<:Number,DM<:AbstractMatrix,CT<:ConcreteTransfer}(co::ApproxFun.CachedOperator{T,DM,CT},n::Integer)
+function ApproxFun.colstop(co::ApproxFun.CachedOperator{T,DM,CT},n::Integer) where
+    {T<:Number,DM<:AbstractMatrix,CT<:ConcreteTransfer}
   ApproxFun.resizedata!(co,:,n)
   ApproxFun.colstop(co.data,n)
 end

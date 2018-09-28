@@ -56,39 +56,37 @@ mapinvD(c::ComposedMarkovMap,b,x) = mapinvP(c,b,x)[2]
 
 # TODO: map(P,D)(c,b,x)
 
-function getbranchind(m::ComposedMarkovMap,x)
+function getbranch(m::ComposedMarkovMap,x)
   temp_in(x,m.domain) || error("DomainError: $x ∉ $(m.domain)")
   fx = x
-  br = getbranchind(m.maps[end],fx)
+  br = getbranch(m.maps[end],fx)
   for i = complength(c)-1:-1:1
     fx = m.maps[i+1](fx)
-    br = (getbranchind(m.maps[i],fx),br...)
+    br = (getbranch(m.maps[i],fx),br...)
   end
   br
 end
 
 nbranches(C::ComposedMarkovMap) = prod(nbranches(mm for mm in C.maps))
 eachbranchindex(C::ComposedMarkovMap) = product(eachbranchindex(mm) for mm in C.maps)
-branchindtype(C::ComposedMarkovMap) = Array{promote_type([branchindtype(mm) for mm in C.maps]...)}
-nneutral(C::ComposedMarkovMap) = 0 # assume we can't do this
-neutralfixedpoints(C::ComposedMarkovMap) = []
 
 #TODO: must be faster??
-function transferfunction{M<:AbstractMarkovMap}(x,m::ComposedMarkovMap{Tuple{M}},f)
-  transferfunction(x,m.maps[1],f)
+function transferfunction(x,m::ComposedMarkovMap{Tuple{M}},f,T) where {M<:AbstractMarkovMap}
+  transferfunction(x,m.maps[1],f,T)
 end
 
-struct TransferCall{M<:AbstractMarkovMap,ff}
+struct TransferCall{M<:AbstractMarkovMap,ff,T}
   m::M
   f::ff
+  t::Type{T}
 end
-# TransferCall(m,f) = TransferCall{typeof(m),typeof(f),T}(m,f)
-(t::TransferCall)(x) = transferfunction(x,t.m,t.f)
+# TransferCall(m,f,T) = TransferCall{typeof(m),typeof(f),T}(m,f)
+(t::TransferCall)(x) = transferfunction(x,t.m,t.f,t.t)
 
-function transferfunction(x,m::ComposedMarkovMap,f)
+function transferfunction(x,m::ComposedMarkovMap,f,T)
   m2 = ComposedMarkovMap(m.maps[2:end],domain(m.maps[end]),rangedomain(m.maps[2]))
-  transferfunction(x,m.maps[1],#x->transferfunction(x,m2,f))
-    TransferCall(m2,f))
+  transferfunction(x,m.maps[1],#x->transferfunction(x,m2,f,T),T)
+    TransferCall(m2,f,T),T)
 end
 
 # TODO: transferfunction_int
@@ -103,7 +101,7 @@ end
 
 
     # stuff you can do for both
-ComposedMap{M,D<:Domain,R<:Range} = Union{ComposedMarkovMap{M,D,R},ComposedCircleMap{M,D,R}}
+ComposedMap{M,D<:Domain,R<:Domain} = Union{ComposedMarkovMap{M,D,R},ComposedCircleMap{M,D,R}}
 
 for FUN in (:domain,:rangedomain)
   @eval ($FUN)(c::ComposedMarkovMap) = c.$FUN

@@ -1,12 +1,11 @@
 export NeutralBranch
 
 # ExpandingBranch
-@compat abstract type AbstractBranch{D<:Domain,R<:Domain}; end
 
-@compat abstract type ExpandingBranch{D<:Domain,R<:Domain} <: AbstractBranch{D,R}; end
+@compat abstract type ExpandingBranch{D<:Domain,R<:Domain}; end
 
 Base.summary(b::ExpandingBranch) =  string(typeof(b).name.name)*":"*string(domain(b))*"↦"*string(rangedomain(b)) #branches??
-ApproxFun.prectype(b::ExpandingBranch) = prectype(rangedomain(b))
+ApproxFun.cfstype(b::ExpandingBranch) = eltype(rangedomain(b))
 # Base.show(io::IO,b::ExpandingBranch) = print(io,typeof(b)) #temporary
 
 @compat struct FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: ExpandingBranch{D,R}
@@ -20,8 +19,8 @@ ApproxFun.prectype(b::ExpandingBranch) = prectype(rangedomain(b))
   #   new(fc,dfdxc,dom,ran)
   # end
 end
-function FwdExpandingBranch{D,R,ff,gg}(f::ff,dfdx::gg,dom::D,ran::R)
-  domd = Domain(dom); randm = Domain(ran)
+function FwdExpandingBranch(f,dfdx,dom,ran)
+  domd = convert(Domain,dom); randm = convert(Domain,ran)
   FwdExpandingBranch{typeof(f),typeof(dfdx),typeof(domd),typeof(randm)}(f,dfdx,domd,randm)
 end
 
@@ -48,8 +47,8 @@ end
   #   new(vc,dvdxc,dom,ran)
   # end
 end
-function RevExpandingBranch{D,R,ff,gg}(v::ff,dvdx::gg,dom::D,ran::R)
-    domd = Domain(dom); randm = Domain(ran)
+function RevExpandingBranch(v,dvdx,dom,ran)
+    domd = convert(Domain,dom); randm = convert(Domain,ran)
     RevExpandingBranch{typeof(v),typeof(dvdx),typeof(domd),typeof(randm)}(v,dvdx,domd,randm)
 end
 
@@ -64,27 +63,19 @@ unsafe_mapinv(b::RevExpandingBranch,x) = b.v(x)
 unsafe_mapinvD(b::RevExpandingBranch,x) = b.dvdx(x)
 unsafe_mapinvP(b::RevExpandingBranch,x) = (unsafe_mapinv(b,x),unsafe_mapinvD(b,x))
 
-for B in (FwdExpandingBranch,RevExpandingBranch)
-  for (M,UNS_M) in ((:mapinv,:unsafe_mapinv),(:mapinvD,:unsafe_mapinvD),(:mapinvP,:unsafe_mapinvP))
-    @eval $M(b::$B,x) = begin @assert in(x,rangedomain(b)); $UNS_M(b,x); end
-  end
-
-  # we are assuming that domains are unoriented
-  @eval (b::$B)(x::Segment) = Segment(sort(b.(∂(x)))...)
-  #@eval (b::$B)(x::Interval) = Interval(sort(b.(extrema(x)))...)
+for (M,UNS_M) in ((:mapinv,:unsafe_mapinv),(:mapinvD,:unsafe_mapinvD),(:mapinvP,:unsafe_mapinvP)),
+    B in (FwdExpandingBranch,RevExpandingBranch)
+  @eval $M(b::$B,x) = begin @assert in(x,rangedomain(b)); $UNS_M(b,x); end
 end
 
-mapinv(b::ExpandingBranch,x::Segment) = Segment((mapinv.(b,∂(x)))...)
-# mapinv(b::ExpandingBranch,x::Interval) = Interval(sort(mapinv.(b,extrema(x)))...)
 
-
-# UNDER CONSTRUCTION: NeutralBranch
+# UNDE CONSTRUCTION: NeutralBranch
 @compat struct NeutralBranch
 end
 
 # branch constructors
 
-autodiff(f,d) = autodiff_dual(f,ApproxFun.checkpoints(Domain(d)))
+autodiff(f,d) = autodiff_dual(f,ApproxFun.checkpoints(convert(Domain,d)))
 autodiff(f::Fun,d) = f'
 
 function autodiff_dual(f,bi)
@@ -102,13 +93,13 @@ end
 
 @compat const DomainInput = Union{Domain,IntervalSets.AbstractInterval}
 
-function branch(f,dom,ran,diff=autodiff(f,(dir=Forward ? dom : ran));dir=Forward,
+function branch(f,dom,ran,diff=autodiff(f,(dir==Forward ? dom : ran));dir=Forward,
                       ftype=typeof(f),difftype=typeof(diff))
-  domd = Domain(dom); randm  = Domain(ran);
+  domd = convert(Domain,dom); randm  = convert(Domain,ran);
   dir==Forward ? FwdExpandingBranch{ftype,difftype,typeof(domd),typeof(randm)}(f,diff,domd,randm) :
         RevExpandingBranch{ftype,difftype,typeof(domd),typeof(randm)}(f,diff,domd,randm)
 end
-branch(f,dom,ran,diff::Void;dir=Forward) = branch(f,dom,ran;dir)
+branch(f,dom,ran,diff::Nothing; dir =Forward) = branch(f,dom,ran;dir=dir)
 
 @deprecate branch(f,dfdx,dom::Domain,ran::Domain;dir=Forward) branch(f,dom,ran,diff;dir=dir)
 
@@ -129,13 +120,13 @@ function transferbranch_int_edges(x,y,b::ExpandingBranch)
   iv.a, iv.b
 end
 
-function transferbranch(x,b::ExpandingBranch,f)
-  x ∉ rangedomain(b) && return zero(typeof(x))
+function transferbranch(x,b::ExpandingBranch,f,T)
+  x ∉ rangedomain(b) && return zero(promote_type(T,typeof(x)))
   (v,dvdx) = mapinvP(b,x)
   abs(det(dvdx))*f(v)
 end
-function transferbranch_int(x,y,b::ExpandingBranch,f)
-  x ∉ rangedomain(b) && y ∉ rangedomain(b) && (return zero(typeof(x)))
+function transferbranch_int(x,y,b::ExpandingBranch,f,T)
+  x ∉ rangedomain(b) && y ∉ rangedomain(b) && (return zero(promote_type(T,typeof(x))))
   x,y = transferbranch_int_edges(x,y,b)
   csf = cumsum(f)
   vy = unsafe_mapinv(b,y); vx = unsafe_mapinv(b,x)
@@ -143,15 +134,15 @@ function transferbranch_int(x,y,b::ExpandingBranch,f)
   sgn*(csf(vy)-csf(vx))
 end
 
-function transferbranch(x,b::ExpandingBranch,sk::BasisFun)
-  x ∉ rangedomain(b) && return zero(typeof(x))
+function transferbranch(x,b::ExpandingBranch,sk::BasisFun,T)
+  x ∉ rangedomain(b) && return zero(promote_type(T,typeof(x)))
   (v,dvdx) = unsafe_mapinvP(b,x)
-  abs(det(dvdx))*getbasisfun(v,sk)
+  abs(det(dvdx))*getbasisfun(v,sk,T)
 end
-function transferbranch_int(x,y,b::ExpandingBranch,sk::BasisFun)
-  x ∉ rangedomain(b) && y ∉ rangedomain(b) && (return zero(typeof(x)))
+function transferbranch_int(x,y,b::ExpandingBranch,sk::BasisFun,T)
+  x ∉ rangedomain(b) && y ∉ rangedomain(b) && (return zero(promote_type(T,typeof(x))))
   x,y = transferbranch_int_edges(x,y,b)
   vy = unsafe_mapinv(b,y); unsafe_vx = unsafe_mapinv(b,x)
   sgn = sign((vy-vx)/(y-x))
-  sgn*(getbasisfun_int(vy,sk)-getbasisfun_int(vx,sk))
+  sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
 end

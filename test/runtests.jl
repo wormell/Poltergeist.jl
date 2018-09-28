@@ -1,7 +1,9 @@
 # Pkg.installed()["ApproxFun"] != v"0.4.0+" && Pkg.checkout("ApproxFun","4bcc8f585361184342bb21780cc6be9893d99ce6")
 using Poltergeist
-using Base.Test
+using Test, Compat
 using ApproxFun
+#VERSION < v"0.7" ? (using Compat.LinearAlgebra) : (using LinearAlgebra)
+using LinearAlgebra
 
 f1(x)=2x+sin(2pi*x)/8pi; f2(x)=2x+sin(2pi*x)/8pi-1
 f1d(x)=2+cos(2pi*x)/4; f2d = f1d
@@ -56,13 +58,13 @@ pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
 # @test transfer(M2f,exp,0.28531) ≈ (Transfer(M2f)*Fun(exp,Space(d2)))(0.28531)
 
 println("Lanford map test")
-lan = lanford()
+lan_lift(x) = 5x/2 - x^2/2
+lan = modulomap(lan_lift,0..1);
 K = SolutionInv(lan);
 rho = acim(K);
 l_exp = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
 sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1))
-L_lan = Transfer(lan)
-K = SolutionInv(L_lan);
+K = SolutionInv(lan);
 @time rho = acim(K);
 @time l_exp = lyapunov(K)
 @time l_exp2 = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
@@ -71,16 +73,6 @@ K = SolutionInv(L_lan);
 @test l_exp ≈ 0.657661780006597677541582
 @test l_exp2 ≈ 0.657661780006597677541582
 @test sigmasq_A ≈ 0.360109486199160672898824
-
-# modulomap test
-println("Modulomap and examples test")
-lan_lift(x) = 5x/2 - x^2/2
-lan = modulomap(lan_lift,0..1);
-@test Transfer(lan)[1:100,1:100] ≈ L_lan[1:100,1:100]
-@test diag(Transfer(doubling(PeriodicInterval(6.,7.)))[1:10,1:10]) ≈ [1.;zeros(9)]
-@test diag(Transfer(tupling(-4,0..4.))[1:10,1:10]) ≈ (-1/4).^(0:9)
-
-# @test diag(Transfer(modulomap(x->1-x/5,0..1,dir=Reverse))[1:10,1:10]) .≈ (-0.2).^(0:9)
 
 # Composing test
 println("Composition test 🎼")
@@ -106,7 +98,8 @@ println("Should be ≤0.01s")
 println("Eigenvalue test")
 c = 1/π
 intervalmap = MarkovMap([x->sin(c*asin(x)),x->sin(c+(1-c)*asin(x))],[0..sin(c),sin(c)..sin(1.)],dir=Reverse)
-eigs(intervalmap,100)
+eigvals(intervalmap,100)
+# eigvecs(intervalmap,100)
 @time evs = eigvals(intervalmap,100)
 println(length(evs))
 @assert all(abs.(sort(evs,by=abs,rev=true)[1:5] - (c.^(1:5) + (1-c).^(1:5))).<1e-7)
@@ -133,7 +126,7 @@ covariancefunction(lan,A,100)
 
 # Calling
 println("Newton's method test ☏")
-test_f = linspace(d2.a,d2.b,20)[1:end-1] # map boundaries are dodgy because multivalued
+@compat test_f = range(d2.a,stop=d2.b,length=20)[1:end-1] # map boundaries are dodgy because multivalued
 test_x = [Poltergeist.mapinv(M2b,1,tf) for tf in test_f]
  @test M2b.(test_x) ≈ test_f
  @test M1b.(test_x) ≈ test_f
@@ -184,16 +177,16 @@ println("Should be ≤2s")
 # end
 
 # 2D tests - in testing
-println("2D tests")
-using StaticArrays
-standardmap_inv_lift(x::SVector) = SVector(x[1] - 0.1*sin(x[2] - x[1]),x[2]-x[1]);
-standardmap_inv_diff(x::SVector) = SMatrix{2,2}(1,0,0,1); # As only determinant is important...
-dom = PeriodicInterval()^2
- # binv = branch(standardmap_inv_lift,standardmap_inv_diff,dom,dom,dir="rev"); # deprecated
-binv= branch(standardmap_inv_lift,dom,dom,standardmap_inv_diff,dir=Reverse)
-standardmap = MarkovMap([binv],dom,dom)
-L_standard = Transfer(standardmap)
-ApproxFun.resizedata!(L_standard,:,2)
+# println("2D tests")
+# using StaticArrays
+# standardmap_inv_lift(x::SVector) = SVector(x[1] - 0.1*sin(x[2] - x[1]),x[2]-x[1]);
+# standardmap_inv_diff(x::SVector) = SMatrix{2,2}(1,0,0,1); # As only determinant is important...
+# dom = PeriodicInterval()^2
+#  # binv = branch(standardmap_inv_lift,standardmap_inv_diff,dom,dom,dir="rev"); # deprecated
+# binv= branch(standardmap_inv_lift,dom,dom,standardmap_inv_diff,dir=Reverse)
+# standardmap = MarkovMap([binv],dom,dom)
+# L_standard = Transfer(standardmap)
+# ApproxFun.resizedata!(L_standard,:,2)
 
 println("")
 println("😎")

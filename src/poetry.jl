@@ -5,7 +5,7 @@ export perturb
   b::B
 end
 (bd::ExpandingBranchDerivative)(x::Number) = mapD(bd.b,x)
-Base.ctranspose(b::ExpandingBranch) = ExpandingBranchDerivative(b)
+Base.adjoint(b::ExpandingBranch) = ExpandingBranchDerivative(b)
 # Base.transpose(b::ExpandingBranch) = ExpandingBranchDerivative(b)
 
 @compat struct ExpandingBranchInverse{B<:ExpandingBranch}
@@ -19,29 +19,30 @@ inv(b::ExpandingBranch) = ExpandingBranchInverse(b)
   b::B
 end
 (bi::ExpandingBranchDerivativeInverse)(x::Number) = mapinvD(bd.b,x)
-Base.ctranspose(bi::ExpandingBranchInverse) = ExpandingBranchDerivativeInverse(bi.b)
+Base.adjoint(bi::ExpandingBranchInverse) = ExpandingBranchDerivativeInverse(bi.b)
 # Base.transpose(b::ExpandingBranch) = ExpandingBranchDerivative(b)
 
 @compat struct MarkovMapDerivative{M<:AbstractMarkovMap}
   m::M
 end
 (md::MarkovMapDerivative)(x::Number) = mapD(md.m,x)
-Base.ctranspose(b::AbstractMarkovMap) = MarkovMapDerivative(b)
+Base.adjoint(b::AbstractMarkovMap) = MarkovMapDerivative(b)
 
 # Linear response perturbations
-perturb(d,X,ϵ) = perturb(Domain(d),X,ϵ)
+perturb(d,X,ϵ) = perturb(convert(Domain,d),X,ϵ)
 perturb(d::IntervalDomain,X,ϵ) = MarkovMap([x->x+ϵ*X(x)],[d],d)
 perturb(d::PeriodicDomain,X,ϵ) = FwdCircleMap([x->x+ϵ*X(x)],d)
 perturb(m::AbstractMarkovMap,X,ϵ) = perturb(rangedomain(m),X,ϵ)∘m
 
 # Eigvals overloads
-eigvals(m::AbstractMarkovMap,n::Int64) = eigvals(Transfer(m),n)
-eigs(m::AbstractMarkovMap,n::Int64) = eigs(Transfer(m),n)
+@compat LinearAlgebra.eigvals(m::AbstractMarkovMap,n::Int64) = LinearAlgebra.eigvals(Transfer(m),n)
+ApproxFun.eigs(m::AbstractMarkovMap,n::Int64) = ApproxFun.eigs(Transfer(m),n)
+@compat LinearAlgebra.eigvecs(m::AbstractMarkovMap,n::Int64) = ApproxFun.eigvecs(Transfer(m),n)
 
 # # plotting
 # function plot(m::MarkovMap)
-#   pts = eltype(m)[]
-#   vals = eltype(m)[]
+#   pts = cfstype(m)[]
+#   vals = cfstype(m)[]
 #   sp = sortperm([minimum(∂(domain(b))) for b in branches(m)])
 #   for b in branches(m)[sp]
 #     append!(pts,points(domain(b),100))

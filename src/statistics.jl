@@ -13,7 +13,7 @@ function zero_to(f::Fun,r::Fun=uniform(space(f)))
 end
 
 function linearresponse(K::SolutionInvWrapper,X::Fun)
-  @assert all(isapprox.(X.(∂(domain(X))),0;atol=sqrt(eps(eltype(X))*arclength(domain(X)))))
+  @assert all(isapprox.(X.(∂(domain(X))),0;atol=sqrt(eps(cfstype(X))*arclength(domain(X)))))
   K\(-acim(K)*X)'
 end
 correlationsum(K::SolutionInvWrapper,A::Fun,r=acim(K)) = K \ zero_to(A,r)
@@ -50,7 +50,7 @@ end
   in each direction. Specifically, the (k+1)th entry is the expectation of A A∘f^(k).
   """
 function covariancefunction(L::Operator,A::Fun,n::Int;r=acim(L))
-  cf = Array{eltype(A)}(n+1) # TODO: update to coefficienttype
+  @compat cf = Array{cfstype(A)}(undef,n+1) # TODO: update to coefficienttype
   Az = zero_to(A,r)
   cf[1] = sum(A*Az)
   for i = 1:n
@@ -68,7 +68,7 @@ Choose n so that the covariance declines to a given tolerance
 """
 function covariancefunction(L::Operator,A::Fun;r=acim(L),tol=eps(norm(A.coefficients)^2))
   n = 16
-  cf = Array{eltype(A)}(n+1)
+  @compat cf = Array{cfstype(A)}(undef,n+1)
   Az = zero_to(A,r)
   cf[1] = sum(A*Az)
   for i = 1:n
@@ -104,8 +104,8 @@ Compute the lag-covariance function against transfer operator L between observab
 in each direction. Specifically, the (k+1)th entry of cfA is the expectation of B A∘f^(k) and vice versa for cfB.
 """
 function covariancefunction(L::Operator,A::Fun,B::Fun,n::Int;r=acim(L))
-  cfA = Array{eltype(A)}(n+1)  # TODO: update to coefficienttype
-  cfB = Array{eltype(A)}(n+1)
+  @compat cfA = Array{cfstype(A)}(undef,n+1)  # TODO: update to coefficienttype
+  @compat cfB = Array{cfstype(A)}(undef,n+1)
   Az = zero_to(A,r); Bz = zero_to(B,r)
   cfA[1] = sum(A*Bz)
   cfB[1] = cfA[1]
@@ -140,7 +140,7 @@ end
 
 # Lyapunov exponent
 function lyapunov(f::AbstractMarkovMap,r=acim(f),sp=Space(rangedomain(f)))
-  sum(Fun(x->transferfunction(x,f,x->log(abs(f'(x)))*r(x)),sp))
+  sum(Fun(x->transferfunction(x,f,x->log(abs(f'(x)))*r(x),cfstype(f)),sp))
 end
 function lyapunov(K::SolutionInvWrapper)
   L = Transfer(K)
@@ -155,11 +155,12 @@ end
 (lc::LyapContainer)(x) = log(abs(lc.m'(x)))*lc.tr(x)
 
 function lyapunov(f::ComposedMarkovMap,r=acim(f))#,sp=Space(rangedomain(f)))
+  T = cfstype(f)
   tr = copy(r)
-  lyap = sum(Fun(x->transferfunction(x,f.maps[end],LyapContainer(f.maps[end],tr)),rangedomain(f.maps[end])))
+  lyap = sum(Fun(x->transferfunction(x,f.maps[end],LyapContainer(f.maps[end],tr),T),rangedomain(f.maps[end])))
   for k = complength(f)-1:-1:1
-    tr = Fun(x->transferfunction(x,f.maps[k+1],tr),rangedomain(f.maps[k+1]))
-    lyap += sum(Fun(x->transferfunction(x,f.maps[k],LyapContainer(f.maps[k],tr)),rangedomain(f.maps[k])))
+    tr = Fun(x->transferfunction(x,f.maps[k+1],tr,T),rangedomain(f.maps[k+1]))
+    lyap += sum(Fun(x->transferfunction(x,f.maps[k],LyapContainer(f.maps[k],tr),T),rangedomain(f.maps[k])))
   end
   lyap
 end
