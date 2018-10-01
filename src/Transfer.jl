@@ -22,6 +22,14 @@ ApproxFun.israggedbelow(L::AbstractTransfer) = true
   #   new{T,typeof(domainspace),typeof(rangespace),typeof(m)}(m,domainspace,rangespace,colstops)
   # end
 end
+
+"""
+    Transfer(m::AbstractMarkovMap)
+
+Create a `CachedOperator` of a `ConcreteTransfer` operator encoding the transfer operator of `m`.
+
+Caching is used for speed, as entries of the transfer operator are most efficiently calculated whole columns at a time.
+"""
 Transfer(stuff...;padding=false) = cache(ConcreteTransfer(stuff...),padding=padding)
 
 ConcreteTransfer(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),

@@ -29,14 +29,40 @@ end
 Base.adjoint(b::AbstractMarkovMap) = MarkovMapDerivative(b)
 
 # Linear response perturbations
+"""
+    perturb(d, X, ϵ)
+
+Construct a self-map on domain d: x ↦ x + ϵ X(x)
+"""
 perturb(d,X,ϵ) = perturb(convert(Domain,d),X,ϵ)
 perturb(d::IntervalDomain,X,ϵ) = MarkovMap([x->x+ϵ*X(x)],[d],d)
 perturb(d::PeriodicDomain,X,ϵ) = FwdCircleMap([x->x+ϵ*X(x)],d)
+
+"""
+    perturb(m::AbstractMarkovMap, X, ϵ)
+
+Output perturbation of m: x ↦ m(x) + ϵ X(m(x))
+"""
 perturb(m::AbstractMarkovMap,X,ϵ) = perturb(rangedomain(m),X,ϵ)∘m
 
 # Eigvals overloads
+"""
+    eigvals(m::AbstractMarkovMap, n)
+
+Output eigenvalues of Transfer(m) using n×n Galerkin discretisation.
+
+Calls directly to ApproxFun: you can also call eigvals(Transfer(m), n)
+"""
 @compat LinearAlgebra.eigvals(m::AbstractMarkovMap,n::Int64) = LinearAlgebra.eigvals(Transfer(m),n)
 ApproxFun.eigs(m::AbstractMarkovMap,n::Int64) = ApproxFun.eigs(Transfer(m),n)
+
+"""
+    eigvecs(m::AbstractMarkovMap, n)
+
+Output eigenfunctions of Transfer(m) using n×n Galerkin discretisation.
+
+Calls directly to ApproxFun: you can also call eigvecs(Transfer(m), n)
+"""
 @compat LinearAlgebra.eigvecs(m::AbstractMarkovMap,n::Int64) = ApproxFun.eigvecs(Transfer(m),n)
 
 # # plotting

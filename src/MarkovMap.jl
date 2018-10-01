@@ -8,7 +8,11 @@ Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(dom
 cfstype(m::AbstractMarkovMap) = eltype(rangedomain(m))
 # Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
 
+"""
+    MarkovMap(branches::Vector, domain, rangedomain)
 
+Generate a computer representation of a full-branch uniformly-expanding interval map `domain` → `rangedomain` using a vector describing the branches of the map.
+"""
 @compat struct MarkovMap{D<:Domain,R<:Domain,B<:ExpandingBranch} <: AbstractMarkovMap{D,R}
   branches::AbstractVector{B}
   domain::D
@@ -36,6 +40,15 @@ end
 coveringsegment(ds::AbstractArray) = coveringsegment([convert(Domain,d) for d in ds])
 coveringsegment(dsm::AbstractArray{T}) where T<:Domain = Segment(minimum(first(convert(Domain,d)) for d in dsm),maximum(last(convert(Domain,d)) for d in dsm))
 
+"""
+    MarkovMap(fs::Vector, ds::Vector, ran = coveringsegment(ds); dir=Forward, diff=(...autodiff...))
+
+Generate a MarkovMap with branches given by elements of `fs`` defined on subdomains given by `ds`, onto a vector `ran`.
+
+The keyword argument `dir` stipulates whether the elements of `fs` are the branches (`Forward`) or the branches' inverses (`Reverse`).
+
+The keyword argument `diff` provides the derivatives of the `fs`. By default it is the automatic derivatives of `fs`.
+"""
 function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran=coveringsegment(ds);dir=Forward,
           diff=[autodiff(fs[i],(dir==Forward ? ds[i] : ran)) for i in eachindex(fs)])
   @assert length(fs) == length(ds)
@@ -53,8 +66,24 @@ for FUN in (:mapD,:mapP,:mapinv,:mapinvD,:mapinvP)
   @eval $FUN(m::MarkovMap,i::Integer,x) = $FUN(m.branches[i],x)
 end
 
+"""
+    branches(m)
+
+Return the branches of the map `m`.
+"""
 branches(m) = m.branches
+"""
+    nbranches(m)
+
+Number of branches of `m`.
+"""
 nbranches(m::MarkovMap) = length(m.branches)
+
+"""
+    eachbranchindex(m)
+
+Return an iterator giving the indices of the branches of `m`
+"""
 eachbranchindex(m::MarkovMap) = 1:nbranches(m)
 
 nneutral(m::MarkovMap) = sum([isa(b,NeutralBranch) for b in m.branches])
@@ -102,6 +131,11 @@ end
 (of::Offset)(x) = of.f(x)-of.offset
 
 # TODO: modulomap for reverse direction
+"""
+    modulomap(f, D, R=dom; diff= autodiff(f,dom))
+
+Outputs MarkovMap or CircleMap m: D → R such that m(x) = f(x) mod R.
+"""
 function modulomap(f::ff,dom,ran=dom;diff=autodiff(f,dom)) where ff
   domd = convert(Domain,dom); randm = convert(Domain,ran)
   fa = f(first(domd)); fb = f(last(domd))
