@@ -8,7 +8,7 @@ export MarkovMap, IntervalMap, branch, nbranches, modulomap, induce, CircleMap
 
 Base.show(io::IO, m::AbstractIntervalMap) = print(io, string(typeof(m).name.name)*
     " "*string(domain(m))*"→"*string(rangedomain(m))*"with $(nbranches(m)) branches") #branches??
-# cfstype(m::AbstractMarkovMap) = cfstype(rangedomain(m))
+cfstype(m::AbstractIntervalMap) = eltype(rangedomain(m))
 # Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
 
 # Domain calls
@@ -20,7 +20,11 @@ rangedomain(m::AbstractIntervalMap) = m.rangedomain
 containsnfp(d,m) = any(neutralfixedpoints(m) .∈ d)
 neutralfixedpoints(m::AbstractIntervalMap) = 0
 
+"""
+    MarkovMap(branches::Vector, domain, rangedomain)
 
+Generate a computer representation of a full-branch uniformly-expanding interval map `domain` → `rangedomain` using a vector describing the branches of the map.
+"""
 @compat struct MarkovMap{D<:Domain,R<:Domain,B<:ExpandingBranch} <: AbstractMarkovMap{D,R}
   branches::Vector{B}
   domain::D
@@ -46,6 +50,15 @@ function MarkovMap{B<:ExpandingBranch}(branches::AbstractVector{B},dom,ran)
   MarkovMap{typeof(domd),typeof(randm),B}(branches,domd,randm)
 end
 
+"""
+    MarkovMap(fs::Vector, ds::Vector, ran = coveringsegment(ds); dir=Forward, diff=(...autodiff...))
+
+Generate a MarkovMap with branches given by elements of `fs`` defined on subdomains given by `ds`, onto a vector `ran`.
+
+The keyword argument `dir` stipulates whether the elements of `fs` are the branches (`Forward`) or the branches' inverses (`Reverse`).
+
+The keyword argument `diff` provides the derivatives of the `fs`. By default it is the automatic derivatives of `fs`.
+"""
 function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran=coveringsegment(ds);dir=Forward,
           diff=[autodiff(fs[i],(dir==Forward ? ds[i] : ran)) for i in eachindex(fs)])
   @assert length(fs) == length(ds)
@@ -199,5 +212,10 @@ reversemodulomap(args...) = _NI("reversemodulomap")
 #   MarkovMap(vs,ds,randm,diff=dvdxs,dir=Reverse)
 # end
 
+"""
+    modulomap(f, D, R=dom; dir=Forward, diff= autodiff(f,...))
+
+Outputs MarkovMap or CircleMap m: D → R such that m(x) = f(x) mod R.
+"""
 modulomap(f,d,r=d;dir=Forward,diff=autodiff(f,dir==Forward ? d : r)) =
     dir == Forward ? forwardmodulomap(f,d,r,diff) : reversemodulomap(f,d,r,diff)

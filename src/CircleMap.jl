@@ -46,18 +46,18 @@ end
   va::T
   vb::T
 end
-function RevCircleMap(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm)) where {D<:Domain,R<:Domain,ff,gg}
+function RevCircleMap(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm), maxcover=10000) where {D<:Domain,R<:Domain,ff,gg}
   # @assert isempty(∂(ran)) isempty(∂(dom))
   ra = first(randm); va = v(ra)
   dr = arclength(randm); dd = arclength(domd)
   cover = 1; vr = v(ra+dr)-va
-  while (abs(vr) <= dd && cover < 10000)
+  while (abs(vr) <= dd && cover < maxcover)
     vr = v(ra+cover*dr)-va
     abs(vr) ≈ dd && break
     abs(vr) > dd && error("Inverse lift doesn't appear to have an inverse")
     cover += 1
   end
-  cover == 10000 && error("Can't get to the end of the inverse lift after 10000 steps")
+  cover == maxcover && error("Can't get to the end of the inverse lift after $maxcover steps")
 
   RevCircleMap{D,R,ff,gg,typeof(va)}(v,dvdx,domd,randm,cover,va,v(last(randm)))
 end
