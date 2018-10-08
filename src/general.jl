@@ -12,7 +12,6 @@ end
 
 @compat const GeneralInterval = Union{Segment,PeriodicInterval}
 
-#ApproxFun.qrfact(A::ApproxFun.QROperator) = A
 # rem()
 
 # InterpolationNode
@@ -29,9 +28,9 @@ end
 end
 InterpolationNode(sp::Space,k::Int,n::Int) = InterpolationNode{typeof(sp)}(sp,k,n)
 
-Base.convert{T<:Number}(::Type{T},p::InterpolationNode) = convert(T,points(p.sp,p.n)[p.k])
-Base.convert{S<:Space}(::Type{InterpolationNode{S}},p::InterpolationNode{S}) = p
-Base.promote_rule{T<:Number,S<:Space}(::Type{T},::Type{InterpolationNode{S}}) = promote_type(T,eltype(S))
+Base.convert(::Type{T},p::InterpolationNode) where T<:Number = convert(T,points(p.sp,p.n)[p.k])
+Base.convert(::Type{InterpolationNode{S}},p::InterpolationNode{S}) where S<:Space = p
+Base.promote_rule(::Type{T},::Type{InterpolationNode{S}}) where {T<:Number,S<:Space} = promote_type(T,eltype(S))
 Base.show(p::InterpolationNode) = show(convert(Nu))
 ApproxFun.space(p::InterpolationNode) = p.sp
 ApproxFun.domain(p::InterpolationNode) = domain(p.sp)
@@ -46,12 +45,12 @@ domain_mod(x,p::PeriodicInterval) = interval_mod(x,p.a,p.b)
 
 # Newton's method
 
-domain_newton{U}(f,df,y::U,D::Domain,x::U=convert(U,rand(D)),tol=400eps(eltype(U))) = basic_newton(f,df,y,x,tol)
+domain_newton(f,df,y::U,D::Domain,x::U=convert(U,rand(D)),tol=400eps(eltype(U))) where U = basic_newton(f,df,y,x,tol)
 domain_guess(x,dom::Domain,ran::Domain) = rand(ran)
 
-domain_guess{N}(x::SVector{N},dom::ProductDomain,ran::ProductDomain) = SVector{N}([interval_guess(x[i],dom.domains[i],ran.domains[i]) for i =1:N])
+domain_guess(x::SVector{N},dom::ProductDomain,ran::ProductDomain) where N = SVector{N}([interval_guess(x[i],dom.domains[i],ran.domains[i]) for i =1:N])
 
-function basic_newton{U}(f,df,y::U,x::U,tol=40eps(U))
+function basic_newton(f,df,y::U,x::U,tol=40eps(U)) where U
   z = x
   rem = f(z)-y
   for i = 1:2log2(-200log(eps(eltype(y))))
@@ -65,7 +64,7 @@ function basic_newton{U}(f,df,y::U,x::U,tol=40eps(U))
   z
 end
 
-# function monotonic_newton{U}(f,df,y::U,xl::U,xh::U,tol=40eps(U)) ## TODO: REALLY WANT UPPER/LOWER GUESSES OR STH
+# function monotonic_newton(f,df,y::U,xl::U,xh::U,tol=40eps(U)) where U ## TODO: REALLY WANT UPPER/LOWER GUESSES OR STH
 #   σ = sign(df(x))
 #   det(σ) == 0 && error("f has critical point at $x")
 #   z = xl
@@ -93,7 +92,7 @@ end
 #   z
 # end
 
-function interval_newton{T,U<:Real}(f,df,y::U,da::T,db::T,x::U=(da+db)/2,tol=40eps(max(abs(da),abs(db))))
+function interval_newton(f,df,y::U,da::T,db::T,x::U=(da+db)/2,tol=40eps(max(abs(da),abs(db)))) where {T,U<:Real}
   rem = f(x)-y
   for i = 1:2log2(-200log(eps(typeof(y))))
     #    while abs(rem) > 30eps(maximum(∂(D)))
@@ -109,7 +108,7 @@ function interval_newton{T,U<:Real}(f,df,y::U,da::T,db::T,x::U=(da+db)/2,tol=40e
   x
 end
 
-function interval_newton{T,U<:Complex}(f,df,y::U,da::T,db::T,x::U=(da+db)/2,tol=40eps(max(abs(da),abs(db))))
+function interval_newton(f,df,y::U,da::T,db::T,x::U=(da+db)/2,tol=40eps(max(abs(da),abs(db)))) where {T,U<:Complex}
   rem = f(x)-y
   for i = 1:2log2(-200log(eps(typeof(abs(y)))))
     #    while abs(rem) > 30eps(maximum(∂(D)))
@@ -121,12 +120,18 @@ function interval_newton{T,U<:Complex}(f,df,y::U,da::T,db::T,x::U=(da+db)/2,tol=
   abs(rem) > tol && error("Newton: failure to converge: y = $y, x estimate = $x, rem = $rem")
   x
 end
-domain_newton{U<:Union{Real,Complex}}(f,df,y::U,D::GeneralInterval,x::U=(D.a+D.b)/2,tol=40eps(max(abs(D.a),abs(D.b)))) = interval_newton(f,df,y,D.a,D.b,x,tol)
+function domain_newton(f,df,y::U,D::GeneralInterval,x::U=(D.a+D.b)/2,
+            tol=40eps(max(abs(D.a),abs(D.b)))) where U<:Union{Real,Complex}
+    # x = convert(U,x);
+    interval_newton(f,df,y,D.a,D.b,x,tol)
+end
 
-interval_guess(y::Number,dom::Domain,ran::Domain) = (dom.a*ran.b-ran.a*dom.b+y*(dom.b-dom.a))/(ran.b-ran.a)
-domain_guess(y::Number,dom::GeneralInterval,ran::GeneralInterval) = interval_guess(y,dom,ran)
+interval_guess(y::Number,dom::Domain,ran::Domain) =
+    (dom.a*ran.b-ran.a*dom.b+y*(dom.b-dom.a))/(ran.b-ran.a)
+domain_guess(y::Number,dom::GeneralInterval,ran::GeneralInterval) =
+    interval_guess(y,dom,ran)
 
-function disc_newton{T,U}(f,df,y::U,rad::T,x::U=y,tol=40eps(rad))
+function disc_newton(f,df,y::U,rad::T,x::U=y,tol=40eps(rad)) where {T, U}
 #   x = convert(typeof(y),rad*rand(typeof(real(y))))
   rem = f(x) - y
   for i = 1:2log2(-200log(eps(typeof(real(y)))))
@@ -168,8 +173,8 @@ function fourierCSk_int(x,d,k::Integer)
   (rem(k,2) == 1 ? -sin(fld(k,2)*tocanonical(d,x)) : cos(fld(k,2)*tocanonical(d,x)))/
     fld(k,2)/tocanonicalD(d,x)
 end
-getbasisfun{DD,K<:Integer}(x,sk::BasisFun{Fourier{DD},K},T) = fourierCSk(x,domain(sk.s),sk.k)
-getbasisfun_int{DD,K<:Integer}(x,sk::BasisFun{Fourier{DD},K},T) = fourierCSk_int(x,domain(sk.s),sk.k)
+getbasisfun(x,sk::BasisFun{Fourier{DD},K},T) where {DD, K<:Integer} = fourierCSk(x,domain(sk.s),sk.k)
+getbasisfun_int(x,sk::BasisFun{Fourier{DD},K},T) where {DD, K<:Integer} = fourierCSk_int(x,domain(sk.s),sk.k)
 
 chebyTk(x,d,k::Integer) = cos((k-1)*acos(tocanonical(d,x))) #roundoff error grows linearly(??) with k may not be bad wrt x too
 function chebyTk_int(x,d,k::Integer)
@@ -177,10 +182,10 @@ function chebyTk_int(x,d,k::Integer)
   k == 2 && return tocanonical(d,x)^2/2tocanonicalD(d,x)
   ((k-1)*chebyTk(x,d,k+1) - k*tocanonical(d,x)*chebyTk(x,d,k))/((k-1)^2-1)/tocanonicalD(d,x)
 end
-getbasisfun{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K},T) = chebyTk(x,domain(sk.s),sk.k)
-getbasisfun_int{F<:Chebyshev,K<:Integer}(x,sk::BasisFun{F,K},T) = chebyTk_int(x,domain(sk.s),sk.k)
+getbasisfun(x,sk::BasisFun{F,K},T) where {F<:Chebyshev, K<:Integer} = chebyTk(x,domain(sk.s),sk.k)
+getbasisfun_int(x,sk::BasisFun{F,K},T) where {F<:Chebyshev,K<:Integer} = chebyTk_int(x,domain(sk.s),sk.k)
 
-function getbasisfun{F<:TensorSpace,K<:Integer}(x,sk::BasisFun{F,K},T)
+function getbasisfun(x,sk::BasisFun{F,K},T) where {F<:TensorSpace,K<:Integer}
   ks = ApproxFun.tensorizer(sk.s)[sk.k]
   prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i]),T) for i = eachindex(sk.s.spaces))
 end
@@ -189,5 +194,7 @@ end
 
 # # Directions
 @compat abstract type Direction; end
-@compat struct Forward <: Direction; end
-@compat struct Reverse <: Direction; end
+@compat struct ForwardDirection <: Direction; end
+@compat struct ReverseDirection <: Direction; end
+const Forward = ForwardDirection()
+const Reverse = ReverseDirection()

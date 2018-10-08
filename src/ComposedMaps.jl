@@ -71,7 +71,7 @@ nbranches(C::ComposedMarkovMap) = prod(nbranches(mm for mm in C.maps))
 eachbranchindex(C::ComposedMarkovMap) = product(eachbranchindex(mm) for mm in C.maps)
 
 #TODO: must be faster??
-function transferfunction{M<:AbstractMarkovMap}(x,m::ComposedMarkovMap{Tuple{M}},f,T)
+function transferfunction(x,m::ComposedMarkovMap{Tuple{M}},f,T) where {M<:AbstractMarkovMap}
   transferfunction(x,m.maps[1],f,T)
 end
 
@@ -101,7 +101,7 @@ end
 
 
     # stuff you can do for both
-ComposedMap{M,D<:Domain,R<:Range} = Union{ComposedMarkovMap{M,D,R},ComposedCircleMap{M,D,R}}
+ComposedMap{M,D<:Domain,R<:Domain} = Union{ComposedMarkovMap{M,D,R},ComposedCircleMap{M,D,R}}
 
 for FUN in (:domain,:rangedomain)
   @eval ($FUN)(c::ComposedMarkovMap) = c.$FUN

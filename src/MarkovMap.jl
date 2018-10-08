@@ -5,10 +5,14 @@ export MarkovMap, branch, nbranches, modulomap, induce, CircleMap
 #abstract AbstractDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: AbstractMarkovMap{D,R,T,FF}
 
 Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(domain(m))*"↦"*string(rangedomain(m)) #branches??
-# Base.eltype(m::AbstractMarkovMap) = eltype(rangedomain(m))
+cfstype(m::AbstractMarkovMap) = eltype(rangedomain(m))
 # Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
 
+"""
+    MarkovMap(branches::Vector, domain, rangedomain)
 
+Generate a computer representation of a full-branch uniformly-expanding interval map `domain` → `rangedomain` using a vector describing the branches of the map.
+"""
 @compat struct MarkovMap{D<:Domain,R<:Domain,B<:ExpandingBranch} <: AbstractMarkovMap{D,R}
   branches::AbstractVector{B}
   domain::D
@@ -26,22 +30,31 @@ Base.summary(m::AbstractMarkovMap) =  string(typeof(m).name.name)*":"*string(dom
     new(branches,dom,ran)
   end
 end
-MarkovMap(branches::AbstractVector,dom,ran) = MarkovMap(branches,Domain(dom),Domain(ran))
+MarkovMap(branches::AbstractVector,dom,ran) = MarkovMap(branches,convert(Domain,dom),convert(Domain,ran))
 
-function MarkovMap{B<:ExpandingBranch}(branches::AbstractVector{B},dom,ran)
-  domd = Domain(dom); randm = Domain(ran)
+function MarkovMap(branches::AbstractVector{B},dom,ran) where B<:ExpandingBranch
+  domd = convert(Domain,dom); randm = convert(Domain,ran)
   MarkovMap{typeof(domd),typeof(randm),B}(branches,domd,randm)
 end
 
-coveringsegment(ds::AbstractArray) = coveringsegment([Domain(d) for d in ds])
-coveringsegment{T<:Domain}(dsm::AbstractArray{T}) = Segment(minimum(first(Domain(d)) for d in dsm),maximum(last(Domain(d)) for d in dsm))
+coveringsegment(ds::AbstractArray) = coveringsegment([convert(Domain,d) for d in ds])
+coveringsegment(dsm::AbstractArray{T}) where T<:Domain = Segment(minimum(first(convert(Domain,d)) for d in dsm),maximum(last(convert(Domain,d)) for d in dsm))
 
+"""
+    MarkovMap(fs::Vector, ds::Vector, ran = coveringsegment(ds); dir=Forward, diff=(...autodiff...))
+
+Generate a MarkovMap with branches given by elements of `fs`` defined on subdomains given by `ds`, onto a vector `ran`.
+
+The keyword argument `dir` stipulates whether the elements of `fs` are the branches (`Forward`) or the branches' inverses (`Reverse`).
+
+The keyword argument `diff` provides the derivatives of the `fs`. By default it is the automatic derivatives of `fs`.
+"""
 function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran=coveringsegment(ds);dir=Forward,
           diff=[autodiff(fs[i],(dir==Forward ? ds[i] : ran)) for i in eachindex(fs)])
   @assert length(fs) == length(ds)
-  randm=Domain(ran)
-  MarkovMap([branch(fs[i],Domain(ds[i]),randm,diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
-        coveringsegment(ds),Domain(ran))
+  randm=convert(Domain,ran)
+  MarkovMap([branch(fs[i],convert(Domain,ds[i]),randm,diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
+        coveringsegment(ds),convert(Domain,ran))
 end
 
 (m::MarkovMap)(i::Integer,x) = (m.branches[i])(x)
@@ -53,8 +66,24 @@ for FUN in (:mapD,:mapP,:mapinv,:mapinvD,:mapinvP)
   @eval $FUN(m::MarkovMap,i::Integer,x) = $FUN(m.branches[i],x)
 end
 
+"""
+    branches(m)
+
+Return the branches of the map `m`.
+"""
 branches(m) = m.branches
+"""
+    nbranches(m)
+
+Number of branches of `m`.
+"""
 nbranches(m::MarkovMap) = length(m.branches)
+
+"""
+    eachbranchindex(m)
+
+Return an iterator giving the indices of the branches of `m`
+"""
 eachbranchindex(m::MarkovMap) = 1:nbranches(m)
 
 nneutral(m::MarkovMap) = sum([isa(b,NeutralBranch) for b in m.branches])
@@ -102,8 +131,13 @@ end
 (of::Offset)(x) = of.f(x)-of.offset
 
 # TODO: modulomap for reverse direction
-function modulomap{ff}(f::ff,dom,ran=dom;diff=autodiff(f,dom))
-  domd = Domain(dom); randm = Domain(ran)
+"""
+    modulomap(f, D, R=dom; diff= autodiff(f,dom))
+
+Outputs MarkovMap or CircleMap m: D → R such that m(x) = f(x) mod R.
+"""
+function modulomap(f::ff,dom,ran=dom;diff=autodiff(f,dom)) where ff
+  domd = convert(Domain,dom); randm = convert(Domain,ran)
   fa = f(first(domd)); fb = f(last(domd))
   L = arclength(randm)
   nb_est = (fb-fa)/L; nb = round(Int,nb_est) # number of branches
@@ -113,7 +147,7 @@ function modulomap{ff}(f::ff,dom,ran=dom;diff=autodiff(f,dom))
   # @assert nb_est ≈ nb
   @assert nb != 0
 
-  breakpoints = Array{eltype(domd)}(NB+1)
+  @compat breakpoints = Array{eltype(domd)}(undef,NB+1)
   breakpoints[1] = first(domd)
 
   for i = 1:NB-1

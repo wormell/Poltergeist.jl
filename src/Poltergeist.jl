@@ -1,12 +1,16 @@
+__precompile__()
+
 module Poltergeist
   using Base, ApproxFun, BandedMatrices, Compat, DualNumbers, StaticArrays, IntervalSets#, PyPlot#, FastTransforms
+  # VERSION < v"0.7" ? (using Compat.LinearAlgebra) : (using LinearAlgebra)
+  using LinearAlgebra
 
 import Base: values,getindex,setindex!,*,.*,+,.+,-,.-,==,<,<=,>,|,
-  >=,./,/,.^,^,\,∪,∘,transpose, size, length,  eltype, inv, mod, convert,#issymmetric,
-  eigvals, eigs
+  >=,./,/,.^,^,\,∪,∘,transpose, size, length,  eltype, inv, mod, convert#issymmetric,
+@compat import LinearAlgebra: eigvals, eigvecs
 import ApproxFun: domainspace, rangespace, domain, israggedbelow, RaggedMatrix,
   resizedata!, colstop, CachedOperator, Infinity, IntervalDomain,
-  fromcanonicalD, tocanonicalD, fromcanonical, tocanonical, space
+  fromcanonicalD, tocanonicalD, fromcanonical, tocanonical, space, eigs, cfstype
 
 export (..), Segment, PeriodicInterval, Fun
 

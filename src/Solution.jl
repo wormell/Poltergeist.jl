@@ -6,8 +6,8 @@ export SolutionInv
   u::F
 end
 SolutionInvWrapper(op::ApproxFun.QROperator,f::Fun) = SolutionInvWrapper{typeof(op),typeof(f),eltype(op)}(op,f)
-ApproxFun.qrfact!(op::SolutionInvWrapper) = op
-ApproxFun.qrfact(op::SolutionInvWrapper) = op
+ApproxFun.qr!(op::SolutionInvWrapper) = op
+ApproxFun.qr(op::SolutionInvWrapper) = op
 #SolutionInvWrapper(op::Operator) = SolutionInvWrapper(op,uniform(domainspace(op)))
 ApproxFun.@wrapper SolutionInvWrapper
 
@@ -16,7 +16,7 @@ ApproxFun.@wrapper SolutionInvWrapper
 
 function uniform(S::Space)
   u = Fun(one,S)
-  scale!(u.coefficients,1/sum(u))
+  @compat rmul!(u.coefficients,1/sum(u))
   u
 end
 uniform(D::Domain) = uniform(Space(D))
@@ -33,11 +33,11 @@ function SolutionInv(L::Operator,u::Fun=uniform(domainspace(L)))
   end
 
 
-  SolutionInvWrapper(qrfact(I-L + cache(u/sum(u) * di)),u)
+  SolutionInvWrapper(ApproxFun.qr(I-L + cache(u/sum(u) * di)),u)
 end
 SolutionInv(M::AbstractMarkovMap,u::Fun=uniform(Space(domain(M)))) = SolutionInv(Transfer(M,space(u)),u)
 
-Transfer(K::SolutionInvWrapper) = K.op.R.op.ops[2].op # eek??
+Transfer(K::SolutionInvWrapper) = K.op.R_cache.op.ops[2].op # eek??
 
 
 

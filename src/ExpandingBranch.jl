@@ -5,7 +5,7 @@ export NeutralBranch
 @compat abstract type ExpandingBranch{D<:Domain,R<:Domain}; end
 
 Base.summary(b::ExpandingBranch) =  string(typeof(b).name.name)*":"*string(domain(b))*"↦"*string(rangedomain(b)) #branches??
-Base.eltype(b::ExpandingBranch) = eltype(rangedomain(b))
+ApproxFun.cfstype(b::ExpandingBranch) = eltype(rangedomain(b))
 # Base.show(io::IO,b::ExpandingBranch) = print(io,typeof(b)) #temporary
 
 @compat struct FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: ExpandingBranch{D,R}
@@ -19,8 +19,8 @@ Base.eltype(b::ExpandingBranch) = eltype(rangedomain(b))
   #   new(fc,dfdxc,dom,ran)
   # end
 end
-function FwdExpandingBranch{D,R,ff,gg}(f::ff,dfdx::gg,dom::D,ran::R)
-  domd = Domain(dom); randm = Domain(ran)
+function FwdExpandingBranch(f,dfdx,dom,ran)
+  domd = convert(Domain,dom); randm = convert(Domain,ran)
   FwdExpandingBranch{typeof(f),typeof(dfdx),typeof(domd),typeof(randm)}(f,dfdx,domd,randm)
 end
 
@@ -47,8 +47,8 @@ end
   #   new(vc,dvdxc,dom,ran)
   # end
 end
-function RevExpandingBranch{D,R,ff,gg}(v::ff,dvdx::gg,dom::D,ran::R)
-    domd = Domain(dom); randm = Domain(ran)
+function RevExpandingBranch(v,dvdx,dom,ran)
+    domd = convert(Domain,dom); randm = convert(Domain,ran)
     RevExpandingBranch{typeof(v),typeof(dvdx),typeof(domd),typeof(randm)}(v,dvdx,domd,randm)
 end
 
@@ -75,7 +75,7 @@ end
 
 # branch constructors
 
-autodiff(f,d) = autodiff_dual(f,ApproxFun.checkpoints(Domain(d)))
+autodiff(f,d) = autodiff_dual(f,ApproxFun.checkpoints(convert(Domain,d)))
 autodiff(f::Fun,d) = f'
 
 function autodiff_dual(f,bi)
@@ -93,13 +93,13 @@ end
 
 @compat const DomainInput = Union{Domain,IntervalSets.AbstractInterval}
 
-function branch(f,dom,ran,diff=autodiff(f,(dir=Forward ? dom : ran));dir=Forward,
+function branch(f,dom,ran,diff=autodiff(f,(dir==Forward ? dom : ran));dir=Forward,
                       ftype=typeof(f),difftype=typeof(diff))
-  domd = Domain(dom); randm  = Domain(ran);
+  domd = convert(Domain,dom); randm  = convert(Domain,ran);
   dir==Forward ? FwdExpandingBranch{ftype,difftype,typeof(domd),typeof(randm)}(f,diff,domd,randm) :
         RevExpandingBranch{ftype,difftype,typeof(domd),typeof(randm)}(f,diff,domd,randm)
 end
-branch(f,dom,ran,diff::Void;dir=Forward) = branch(f,dom,ran;dir)
+branch(f,dom,ran,diff::Nothing; dir =Forward) = branch(f,dom,ran;dir=dir)
 
 @deprecate branch(f,dfdx,dom::Domain,ran::Domain;dir=Forward) branch(f,dom,ran,diff;dir=dir)
 
