@@ -56,13 +56,13 @@ pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
 # @test transfer(M2f,exp,0.28531) ≈ (Transfer(M2f)*Fun(exp,Space(d2)))(0.28531)
 
 println("Lanford map test")
-lan_lift(x) = 5x/2 - x^2/2
-lan = modulomap(lan_lift,0..1);
+lan = lanford()
 K = SolutionInv(lan);
 rho = acim(K);
 l_exp = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
 sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1))
-K = SolutionInv(lan);
+L_lan = Transfer(lan)
+K = SolutionInv(L_lan);
 @time rho = acim(K);
 @time l_exp = lyapunov(K)
 @time l_exp2 = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
@@ -71,6 +71,16 @@ K = SolutionInv(lan);
 @test l_exp ≈ 0.657661780006597677541582
 @test l_exp2 ≈ 0.657661780006597677541582
 @test sigmasq_A ≈ 0.360109486199160672898824
+
+# modulomap test
+println("Modulomap and examples test")
+lan_lift(x) = 5x/2 - x^2/2
+lan = modulomap(lan_lift,0..1);
+@test Transfer(lan)[1:100,1:100] ≈ L_lan[1:100,1:100]
+@test diag(Transfer(doubling(PeriodicInterval(6.,7.)))[1:10,1:10]) ≈ [1.;zeros(9)]
+@test diag(Transfer(tupling(-4,0..4.))[1:10,1:10]) ≈ (-1/4).^(0:9)
+
+# @test diag(Transfer(modulomap(x->1-x/5,0..1,dir=Reverse))[1:10,1:10]) .≈ (-0.2).^(0:9)
 
 # Composing test
 println("Composition test 🎼")

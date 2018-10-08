@@ -46,7 +46,11 @@ end
   va::T
   vb::T
 end
+<<<<<<< HEAD
 function RevCircleMap(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm), maxcover=10000) where {D<:Domain,R<:Domain,ff,gg}
+=======
+function RevCircleMap{D<:Domain,R<:Domain,ff,gg}(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm),maxcover=10000)
+>>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
   # @assert isempty(∂(ran)) isempty(∂(dom))
   ra = first(randm); va = v(ra)
   dr = arclength(randm); dd = arclength(domd)
@@ -57,7 +61,11 @@ function RevCircleMap(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm), maxcove
     abs(vr) > dd && error("Inverse lift doesn't appear to have an inverse")
     cover += 1
   end
+<<<<<<< HEAD
   cover == maxcover && error("Can't get to the end of the inverse lift after $maxcover steps")
+=======
+  cover == maxcover && error("Can't get to the end of the inverse lift after 10000 steps")
+>>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
 
   RevCircleMap{D,R,ff,gg,typeof(va)}(v,dvdx,domd,randm,cover,va,v(last(randm)))
 end
@@ -90,8 +98,6 @@ end
 CircleMap(f,d,r=d;dir=Forward,diff=autodiff(f,dir==Forward ? d : r)) = dir == Forward ?
   FwdCircleMap(f,d,r,diff) : RevCircleMap(f,d,r,diff)
 
-MarkovMap(m::FwdCircleMap) = modulomap(m.f,m.domain,m.rangedomain,m.dfdx)
-
 ncover(m::AbstractCircleMap) = m.cover
 eachbranchindex(m::AbstractCircleMap) = 1:m.cover
 
@@ -102,7 +108,7 @@ end
 
 # Transfer function
 
-function transferfunction(x,m::AbstractCircleMap,f,T)
+function transferfunction(x,m::AbstractCircleMap,f)
   y = zero(eltype(x));
   for b = 1:ncover(m)
     (v,dvdx) = mapinvP(m,b,x)
@@ -111,7 +117,7 @@ function transferfunction(x,m::AbstractCircleMap,f,T)
   y
 end
 
-function transferfunction_int(x,y,m::AbstractCircleMap,f,T)
+function transferfunction_int(x,y,m::AbstractCircleMap,f)
   q = zero(eltype(x));
   csf = cumsum(f)
   for b = 1:ncover(m)
@@ -122,20 +128,20 @@ function transferfunction_int(x,y,m::AbstractCircleMap,f,T)
   q
 end
 
-function transferfunction(x,m::AbstractCircleMap,sk::BasisFun,T)
+function transferfunction(x,m::AbstractCircleMap,sk::BasisFun)
   y = zero(eltype(x));
   for b = 1:ncover(m)
     (v,dvdx) = mapinvP(m,b,x)
-    y += abs(det(dvdx)).*getbasisfun(v,sk,T)
+    y += abs(det(dvdx)).*getbasisfun(v,sk)
   end
   y
 end
-function transferfunction_int(x,y,m::AbstractCircleMap,sk::BasisFun,T)
+function transferfunction_int(x,y,m::AbstractCircleMap,sk::BasisFun)
   q = zero(eltype(x));
   for b = 1:ncover(m)
     vy = mapinv(m,b,y); vx = mapinv(m,b,x)
     sgn = sign((vy-vx)/(y-x))
-    q += sgn*(getbasisfun_int(vy,sk,T)-getbasisfun_int(vx,sk,T))
+    q += sgn*(getbasisfun_int(vy,sk)-getbasisfun_int(vx,sk))
   end
   q
 end

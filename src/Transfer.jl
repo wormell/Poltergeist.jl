@@ -37,7 +37,7 @@ ConcreteTransfer(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
                     colstops::Array{Int,1}=Int[]) where T =
   ConcreteTransfer{T,typeof(dom),typeof(ran),typeof(m)}(m,dom,ran,colstops)#,domainspace(m),rangespace(m))
 ConcreteTransfer(m,dom::Space=Space(domain(m)),ran=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m))),colstops::Array{Int,1}=Int[]) =
-  ConcreteTransfer(eltype(eltype(rangedomain(m))),m,dom,ran)
+  ConcreteTransfer(prectype(rangedomain(m)),m,dom,ran)
 
 for OP in (:domainspace,:rangespace)
   @eval ApproxFun.$OP(L::ConcreteTransfer) = L.$OP
@@ -70,18 +70,25 @@ end
 
 
 # Transfer a fun - TODO
-function transfer(m::AbstractMarkovMap,fn)
-  @inline tf(x) = transferfunction(x,m,fn,eltype(eltype(rangedomain(m))))
+function transfer(m::AbstractIntervalMap,fn)
+  @inline tf(x) = transferfunction(x,m,fn)
   Fun(tf,rangespace(m)) # TODO: MarkovMaps don't have spaces
 end
-transfer(m::MarkovMap,fn,x) = transferfunction(x,m,fn,eltype(rangedomain(m)))
+transfer(m::AbstractIntervalMap,fn,x) = transferfunction(x,m,fn)
 
 # Indexing
 
+<<<<<<< HEAD
 transferfunction_nodes(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) where {TT,D,R,M<:AbstractMarkovMap} =
   T[transferfunction(p,markovmap(L),BasisFun(domainspace(L),kk),T) for p in points(rangespace(L),n)]
 # transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
 #   T[transferfunction(InterpolationNode(rangespace(markovmap(L)),k,n),markovmap(L),BasisFun(domainspace(L),kk),T) for k = 1:n]
+=======
+transferfunction_nodes(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk) where {TT,D,R,M<:AbstractIntervalMap} =
+  cfstype(domainspace(L))[transferfunction(p,markovmap(L),BasisFun(domainspace(L),kk)) for p in points(rangespace(L),n)]
+# transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk) =
+#   T[transferfunction(InterpolationNode(rangespace(markovmap(L)),k,n),markovmap(L),BasisFun(domainspace(L),kk)) for k = 1:n]
+>>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
 
 
 function transfer_getindex(L::ConcreteTransfer{T},
@@ -101,11 +108,19 @@ function transfer_getindex(L::ConcreteTransfer{T},
   for (kind,kk) in enumerate(k)
     kind > 1 && (mc = max(mc,maximum(L.colstops[k[kind-1]+1:kk])))
 
+<<<<<<< HEAD
     #    f(x) = transferfunction(x,L,kk,T)
     tol = (Tr==Any) ? 200eps() : 200eps(Tr)
 
     if L.colstops[kk] >= 1
       @compat coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow(2,L.colstops[kk])),kk,T))[1:L.colstops[kk]]
+=======
+    #    f(x) = transferfunction(x,L,kk)
+    tol =Tr==Any?200eps():200eps(Tr)
+
+    if L.colstops[kk] >= 1
+      coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow2(L.colstops[kk])),kk))[1:L.colstops[kk]]
+>>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
       maxabsc = max(maximum(abs.(coeffs)),one(Tr))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs)))
     elseif L.colstops[kk]  == 0
@@ -120,12 +135,12 @@ function transfer_getindex(L::ConcreteTransfer{T},
       # ( the difference is we start at n \approx mc )
 
       r=ApproxFun.checkpoints(rs)
-      fr=[transferfunction(rr,markovmap(L),BasisFun(domainspace(L),kk),T) for rr in r]
+      fr=[transferfunction(rr,markovmap(L),BasisFun(domainspace(L),kk)) for rr in r]
       maxabsfr=norm(fr,Inf)
 
       logn = min(round(Int,log2(max(mc,16)),RoundUp),20)
       while logn < 21
-        coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
+        coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk))
 
         maxabsc = max(one(Tr),maximum(abs.(coeffs)))
         if maxabsc == 0 && maxabsfr == 0
@@ -146,7 +161,7 @@ function transfer_getindex(L::ConcreteTransfer{T},
 
       if logn == 21
         warn("Maximum number of coefficients "*string(2^20+1)*" reached in constructing $(kk)th column.")
-        coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk,T))
+        coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,2^logn,kk))
       end
 
     end

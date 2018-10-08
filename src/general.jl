@@ -1,4 +1,7 @@
 export rangedomain, Forward, Reverse
+
+_NI(x) = error("not implemented: $x")
+
 rangedomain(op::Operator) = domain(rangespace(op))
 
 containstransfer(M::Operator) = ApproxFun.iswrapper(M::Operator) && containstransfer(M.op)
@@ -34,14 +37,21 @@ Base.promote_rule(::Type{T},::Type{InterpolationNode{S}}) where {T<:Number,S<:Sp
 Base.show(p::InterpolationNode) = show(convert(Nu))
 ApproxFun.space(p::InterpolationNode) = p.sp
 ApproxFun.domain(p::InterpolationNode) = domain(p.sp)
-Base.eltype(p::InterpolationNode) = eltype(p.sp)
+ApproxFun.prectype(p::InterpolationNode) = prectype(p.sp)
 
-Base.zero(p::InterpolationNode) = zero(eltype(p))
+Base.zero(p::InterpolationNode) = zero(prectype(p))
 
 # Circle domains
 
 interval_mod(x,a,b) = (b-a)*mod((x-a)/(b-a),1)+a
 domain_mod(x,p::PeriodicInterval) = interval_mod(x,p.a,p.b)
+
+# Interval domains
+
+coveringsegment{T<:Domain}(dsm::AbstractArray{T}) = Segment(minimum(first(Domain(d)) for d in dsm),maximum(last(Domain(d)) for d in dsm))
+coveringsegment(ds::AbstractArray) = coveringsegment([Domain(d) for d in ds])
+mapinterval(f,d::Domain) = Interval(extrema((f(first(d)),f(last(d))))...)
+mapinterval(f,d) = mapinterval(f,Domain(d))
 
 # Newton's method
 
@@ -161,9 +171,15 @@ end
   s::S
   k::II
 end
-(b::BasisFun)(x) = getbasisfun(x,sk,eltype(sk.s))
-getbasisfun(x,sk::BasisFun,T) = Fun(sk.s,[zeros(T,sk.k-1);one(T)])(x)
-getbasisfun_int(x,sk::BasisFun,T) = cumsum(Fun(sk.s,[zeros(T,sk.k-1);one(T)]))(x)
+(sk::BasisFun)(x) = getbasisfun(x,sk)
+getbasisfun(x,sk::BasisFun) = Fun(sk.s,[zeros(prectype(sk.s),sk.k-1);one(prectype(sk.s))])(x)
+getbasisfun_int(x,sk::BasisFun) = cumsum(Fun(sk.s,[zeros(prectype(sk.s),sk.k-1);one(prectype(sk.s))]))(x)
+
+@compat struct BasisFunInt{S<:Space,II<:Integer}
+  sk::BasisFun{S,II}
+end
+cumsum(sk::BasisFun) = BasisFunInt(sk)
+(ski::BasisFunInt)(x) = getbasisfun_int(ski.sk,x)
 
 #specialised getbasisfuns
 
@@ -173,8 +189,8 @@ function fourierCSk_int(x,d,k::Integer)
   (rem(k,2) == 1 ? -sin(fld(k,2)*tocanonical(d,x)) : cos(fld(k,2)*tocanonical(d,x)))/
     fld(k,2)/tocanonicalD(d,x)
 end
-getbasisfun(x,sk::BasisFun{Fourier{DD},K},T) where {DD, K<:Integer} = fourierCSk(x,domain(sk.s),sk.k)
-getbasisfun_int(x,sk::BasisFun{Fourier{DD},K},T) where {DD, K<:Integer} = fourierCSk_int(x,domain(sk.s),sk.k)
+getbasisfun(x,sk::BasisFun{Fourier{DD},K}) where {DD, K<:Integer} = fourierCSk(x,domain(sk.s),sk.k)
+getbasisfun_int(x,sk::BasisFun{Fourier{DD},K}) where {DD, K<:Integer} = fourierCSk_int(x,domain(sk.s),sk.k)
 
 chebyTk(x,d,k::Integer) = cos((k-1)*acos(tocanonical(d,x))) #roundoff error grows linearly(??) with k may not be bad wrt x too
 function chebyTk_int(x,d,k::Integer)
@@ -182,12 +198,12 @@ function chebyTk_int(x,d,k::Integer)
   k == 2 && return tocanonical(d,x)^2/2tocanonicalD(d,x)
   ((k-1)*chebyTk(x,d,k+1) - k*tocanonical(d,x)*chebyTk(x,d,k))/((k-1)^2-1)/tocanonicalD(d,x)
 end
-getbasisfun(x,sk::BasisFun{F,K},T) where {F<:Chebyshev, K<:Integer} = chebyTk(x,domain(sk.s),sk.k)
-getbasisfun_int(x,sk::BasisFun{F,K},T) where {F<:Chebyshev,K<:Integer} = chebyTk_int(x,domain(sk.s),sk.k)
+getbasisfun(x,sk::BasisFun{F,K}) where {F<:Chebyshev, K<:Integer} = chebyTk(x,domain(sk.s),sk.k)
+getbasisfun_int(x,sk::BasisFun{F,K}) where {F<:Chebyshev,K<:Integer} = chebyTk_int(x,domain(sk.s),sk.k)
 
-function getbasisfun(x,sk::BasisFun{F,K},T) where {F<:TensorSpace,K<:Integer}
+function getbasisfun(x,sk::BasisFun{F,K}) where {F<:TensorSpace,K<:Integer}
   ks = ApproxFun.tensorizer(sk.s)[sk.k]
-  prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i]),T) for i = eachindex(sk.s.spaces))
+  prod(getbasisfun(x[i],BasisFun(sk.s.spaces[i],ks[i])) for i = eachindex(sk.s.spaces))
 end
 # no getbasisfun_int as you don't have antiderivatives
 

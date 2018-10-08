@@ -17,6 +17,7 @@ See also: [`tupling`](@ref), [`doubling`](@ref)
 lanford(T=Float64) = MarkovMap([lanford_v0,lanford_v1],[0..lanford_brk(T),lanford_brk(T)..1];dir=Reverse,diff=[lanford_dv0,lanford_dv1])
 
 # tupling map
+<<<<<<< HEAD
 """
     tupling(k::Int, d = Segment(0,1.))
 
@@ -36,3 +37,10 @@ Returns the full-branch interval map on domain d with 2 equally-sized branches.
 See also: [`tupling`](@ref), [`lanford`](@ref)
 """
 doubling(d=Segment(0,1.)) = tupling(2,d)
+=======
+tupling(k::Int,d=0..1.) = tupling(k,Domain(d))
+tupling(k::Int,d::Segment) = modulomap(x->k*x,d,d,diff=x->oftype(x,k))#reversemodulomap(x->x/k,d,d,x->one(typeof(x))/k)
+# tupling(k::Int,d::Segment) = MarkovMap([x->k*x-j for j = 0:k-1],[j/k..(j+1)/k for j = 0:k-1])
+tupling(k::Int,d::PeriodicInterval) = RevCircleMap(x->x/k,d,d,x->one(typeof(x))/k)
+doubling(d=0..1.) = tupling(2,d)
+>>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
