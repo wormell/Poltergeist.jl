@@ -1,8 +1,8 @@
 module HGraphs
 
 using ApproxFun
-importall LightGraphs
-importall LightGraphs.SimpleGraphs, Poltergeist
+using LightGraphs
+import LightGraphs.SimpleGraphs, Poltergeist
 import Poltergeist: AbstractIntervalMap
 import Base: show
 export HofbauerEdge, HofbauerExtension, hdomains, domains, isnfp, getmap

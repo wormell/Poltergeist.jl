@@ -7,8 +7,8 @@ struct InducedMap{M<:AbstractIntervalMap, D<:Domain, R<:Domain, HD, I} <: Abstra
 
     function InducedMap(he::HofbauerExtension{I,HD,M}, d::D, rd::R, d_ind::Int, r_ind::Int) where
             {M<:AbstractIntervalMap,D<:Domain,R<:Domain,HD,I}
-    @assert d == Domain(hdomains(he)[d_ind])
-    @assert rd == Domain(hdomains(he)[r_ind])
+    @assert d == convert(Domain,hdomains(he)[d_ind])
+    @assert rd == convert(Domain,hdomains(he)[r_ind])
     new{M,D,R,HD,I}(he,d,rd,d_ind,r_ind)
     end
 end
@@ -20,15 +20,15 @@ function InducedMap(he::HofbauerExtension, domain::Domain, rangedomain::Domain)
 end
 
 InducedMap(he::HofbauerExtension,d_ind::Int,r_ind::Int) =
-    InducedMap(he,Domain(hdomains(he)[d_ind]),Domain(hdomains(he)[r_ind]),d_ind,r_ind)
-InducedMap(he::HofbauerExtension,d,r) = InducedMap(he,Domain(d),Domain(r))
+    InducedMap(he,convert(Domain,hdomains(he)[d_ind]),convert(Domain,hdomains(he)[r_ind]),d_ind,r_ind)
+InducedMap(he::HofbauerExtension,d,r) = InducedMap(he,convert(Domain,d),convert(Domain,r))
 InducedMap(he::HofbauerExtension,d) = InducedMap(he,d,d)
 InducedMap(he::HofbauerExtension) = InducedMap(he,1,1)
 
 InducedMap(m::AbstractIntervalMap;maxdepth=100,forcereturn=true) = InducedMap(hofbauerextension(m;maxdepth=maxdepth,forcereturn=forcereturn))
 InducedMap(m::AbstractIntervalMap,d;maxdepth=100,forcereturn=trues(length(d))) = InducedMap(hofbauerextension(m,d;maxdepth=maxdepth,forcereturn=forcereturn),d)
 #length(d::Interval) not defined so:
-InducedMap(m::AbstractIntervalMap,d::ClosedInterval;maxdepth=100,forcereturn=true) = InducedMap(hofbauerextension(m,Domain(d);maxdepth=maxdepth,forcereturn=forcereturn),d)
+InducedMap(m::AbstractIntervalMap,d::ClosedInterval;maxdepth=100,forcereturn=true) = InducedMap(hofbauerextension(m,convert(Domain,d);maxdepth=maxdepth,forcereturn=forcereturn),d)
 
 induce(m::AbstractIntervalMap,args...) = InducedMap(m)
 
@@ -45,7 +45,7 @@ function (im::InducedMap)(x;maxiter=10000)
         isempty(graphinds) && error("reached end of generated Hofbauer extension at depth $(hdomains(im.he)[graphind].depth)")
         for g in graphinds
             dst_ind = dst(im.he.fedgelist[graphind][g])
-            if x ∈ Domain(hdomains(im.he)[dst_ind])
+            if x ∈ convert(Domain,hdomains(im.he)[dst_ind])
                 graphind = dst_ind
                 break
             end

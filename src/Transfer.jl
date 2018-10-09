@@ -32,12 +32,12 @@ Caching is used for speed, as entries of the transfer operator are most efficien
 """
 Transfer(stuff...;padding=false) = cache(ConcreteTransfer(stuff...),padding=padding)
 
-ConcreteTransfer(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
-                    ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m))),
-                    colstops::Array{Int,1}=Int[]) where T =
-  ConcreteTransfer{T,typeof(dom),typeof(ran),typeof(m)}(m,dom,ran,colstops)#,domainspace(m),rangespace(m))
+# ConcreteTransfer(::Type{T},m::AbstractMarkovMap,dom::Space=Space(domain(m)),
+#                     ran::Space=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m))),
+#                     colstops::Array{Int,1}=Int[]) where T =
+#   ConcreteTransfer{T,typeof(dom),typeof(ran),typeof(m)}(m,dom,ran,colstops)#,domainspace(m),rangespace(m))
 ConcreteTransfer(m,dom::Space=Space(domain(m)),ran=(domain(m)==rangedomain(m) ? dom : Space(rangedomain(m))),colstops::Array{Int,1}=Int[]) =
-  ConcreteTransfer(prectype(rangedomain(m)),m,dom,ran)
+  ConcreteTransfer{prectype(rangedomain(m)),typeof(dom),typeof(ran),typeof(m)}(m,dom,ran,colstops)
 
 for OP in (:domainspace,:rangespace)
   @eval ApproxFun.$OP(L::ConcreteTransfer) = L.$OP
@@ -78,17 +78,10 @@ transfer(m::AbstractIntervalMap,fn,x) = transferfunction(x,m,fn)
 
 # Indexing
 
-<<<<<<< HEAD
-transferfunction_nodes(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) where {TT,D,R,M<:AbstractMarkovMap} =
-  T[transferfunction(p,markovmap(L),BasisFun(domainspace(L),kk),T) for p in points(rangespace(L),n)]
-# transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk,T) =
-#   T[transferfunction(InterpolationNode(rangespace(markovmap(L)),k,n),markovmap(L),BasisFun(domainspace(L),kk),T) for k = 1:n]
-=======
 transferfunction_nodes(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk) where {TT,D,R,M<:AbstractIntervalMap} =
-  cfstype(domainspace(L))[transferfunction(p,markovmap(L),BasisFun(domainspace(L),kk)) for p in points(rangespace(L),n)]
+  prectype(domainspace(L))[transferfunction(p,markovmap(L),BasisFun(domainspace(L),kk)) for p in points(rangespace(L),n)]
 # transferfunction_nodes{TT,D,R,M<:MarkovInverseCache}(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk) =
 #   T[transferfunction(InterpolationNode(rangespace(markovmap(L)),k,n),markovmap(L),BasisFun(domainspace(L),kk)) for k = 1:n]
->>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
 
 
 function transfer_getindex(L::ConcreteTransfer{T},
@@ -108,19 +101,10 @@ function transfer_getindex(L::ConcreteTransfer{T},
   for (kind,kk) in enumerate(k)
     kind > 1 && (mc = max(mc,maximum(L.colstops[k[kind-1]+1:kk])))
 
-<<<<<<< HEAD
-    #    f(x) = transferfunction(x,L,kk,T)
     tol = (Tr==Any) ? 200eps() : 200eps(Tr)
 
     if L.colstops[kk] >= 1
-      @compat coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow(2,L.colstops[kk])),kk,T))[1:L.colstops[kk]]
-=======
-    #    f(x) = transferfunction(x,L,kk)
-    tol =Tr==Any?200eps():200eps(Tr)
-
-    if L.colstops[kk] >= 1
-      coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow2(L.colstops[kk])),kk))[1:L.colstops[kk]]
->>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
+      @compat coeffs = ApproxFun.transform(rs,transferfunction_nodes(L,max(16,nextpow(2,L.colstops[kk])),kk))[1:L.colstops[kk]]
       maxabsc = max(maximum(abs.(coeffs)),one(Tr))
       chop!(coeffs,tol*maxabsc*log2(length(coeffs)))
     elseif L.colstops[kk]  == 0

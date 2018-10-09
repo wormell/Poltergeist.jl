@@ -6,11 +6,8 @@ export NeutralBranch
 @compat abstract type ExpandingBranch{D<:Domain,R<:Domain} <: AbstractBranch{D,R}; end
 
 Base.summary(b::ExpandingBranch) =  string(typeof(b).name.name)*":"*string(domain(b))*"↦"*string(rangedomain(b)) #branches??
-<<<<<<< HEAD
-ApproxFun.cfstype(b::ExpandingBranch) = eltype(rangedomain(b))
-=======
 ApproxFun.prectype(b::ExpandingBranch) = prectype(rangedomain(b))
->>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
+eltype(b::ExpandingBranch) = eltype(rangedomain(b))
 # Base.show(io::IO,b::ExpandingBranch) = print(io,typeof(b)) #temporary
 
 @compat struct FwdExpandingBranch{ff,gg,D<:Domain,R<:Domain} <: ExpandingBranch{D,R}

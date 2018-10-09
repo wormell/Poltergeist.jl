@@ -9,7 +9,7 @@ struct HofbauerDomain{D<:Domain}
     depth::Int
 end
 show(io::IO, d::HofbauerDomain) = print(io, "$(d.domain) at depth $(d.depth)")
-Domain(d::HofbauerDomain) = d.domain
+convert(Domain,d::HofbauerDomain) = d.domain
 
 maxrangedomain(m::AbstractIntervalMap) =
     rangedomain(branches(m)[findmax(arclength.(rangedomain.(branches(m))))[2]])
@@ -47,7 +47,7 @@ function _hofbauerdestination(he::HofbauerExtension, bind, x, graphind)
     isempty(graphinds) && error("reached end of generated Hofbauer extension at depth $(hdomains(im.he)[graphind].depth)")
     for g in graphinds
         dst_ind = dst(im.he.fedgelist[graphind][g])
-        if x ∈ Domain(hdomains(he)[dst_ind])
+        if x ∈ convert(Domain,hdomains(he)[dst_ind])
             graphind = dst_ind
             break
         end
@@ -116,7 +116,7 @@ function hofbauerextension(m::AbstractIntervalMap,basedoms=(maxrangedomain(m));m
 
     G = HofbauerExtension{Int,HofbauerDomain}(m)
     for (n,bd) in enumerate(basedoms)
-        basehdom = HofbauerDomain(Domain(bd),1)
+        basehdom = Hofbauerconvert(Domain,convert(Domain,bd),1)
         add_vertex!(G,basehdom,forcereturn[n])
     end
 
@@ -150,7 +150,7 @@ function towerwalk!(G::HofbauerExtension, graphind, hdom)
                 newdom = (bdom ≈ capdom) ? rangedomain(b) : b(capdom)
             end
             for i in G.returnto
-                forcedom = Domain(hdomains(G)[i])
+                forcedom = convert(Domain,hdomains(G)[i])
                 if issubset(forcedom,newdom)
                     towerextend!(G, graphind, hdom, forcedom, branchind, isnfp)
                     newdom = newdom \ forcedom
@@ -162,13 +162,13 @@ function towerwalk!(G::HofbauerExtension, graphind, hdom)
 end
 
 function towerextend!(G::HofbauerExtension, graphind, hdom, newdom, branchind, isnfp)
-    arclength(newdom) < 300eps(arclength(Domain(hdom))) && return true
+    arclength(newdom) < 300eps(arclength(convert(Domain,hdom))) && return true
     newgraphind = findfirst(collect(h.domain≈newdom for h in hdomains(G)))
     addgraphind = (newgraphind == 0) # does the new domain already exist
 
     # add new domain if necessary
     if addgraphind
-        newhdom = HofbauerDomain(newdom,hdom.depth+1)
+        newhdom = Hofbauerconvert(Domain,newdom,hdom.depth+1)
         add_vertex!(G,newhdom)
         newgraphind = nv(G)
     end

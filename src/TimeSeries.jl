@@ -2,7 +2,7 @@ export timeseries, timehist
 function map_n(m::AbstractMarkovMap,x::Number,n::Integer)
   y = copy(x)
   for i = 1:n
-    y = m(x)*(1+randn()*eps(cfstype(m)))
+    y = m(x)*(1+randn()*eps(prectype(m)))
   end
   y
 end

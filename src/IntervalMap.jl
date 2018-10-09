@@ -8,7 +8,9 @@ export MarkovMap, IntervalMap, branch, nbranches, modulomap, induce, CircleMap
 
 Base.show(io::IO, m::AbstractIntervalMap) = print(io, string(typeof(m).name.name)*
     " "*string(domain(m))*"→"*string(rangedomain(m))*"with $(nbranches(m)) branches") #branches??
-# Base.eltype(m::AbstractMarkovMap) = eltype(rangedomain(m))
+prectype(m::AbstractIntervalMap) = promote_type(prectype(domain(m)),prectype(rangedomain(m)))
+eltype(m::AbstractMarkovMap) = promote_type(eltype(domain(m)),eltype(rangedomain(m)))
+
 # Base.show(io::IO,m::AbstractMarkovMap) = print(io,typeof(m)) #temporary
 
 # Domain calls
@@ -21,6 +23,11 @@ containsnfp(d,m) = any(neutralfixedpoints(m) .∈ d)
 neutralfixedpoints(m::AbstractIntervalMap) = 0
 
 
+"""
+    MarkovMap(branches::Vector, domain, rangedomain)
+
+Generate a computer representation of a full-branch uniformly-expanding interval map `domain` → `rangedomain` using a vector describing the branches of the map.
+"""
 @compat struct MarkovMap{D<:Domain,R<:Domain,B<:ExpandingBranch} <: AbstractMarkovMap{D,R}
   branches::Vector{B}
   domain::D
@@ -38,41 +45,50 @@ neutralfixedpoints(m::AbstractIntervalMap) = 0
     new(branches,dom,ran)
   end
 end
-MarkovMap{D<:Domain,R<:Domain,B<:ExpandingBranch}(branches::Vector{B},dom::D,ran::R) = MarkovMap{D,R,B}(branches,dom,ran)
-MarkovMap{B<:ExpandingBranch}(branches::Vector{B},dom,ran) = MarkovMap(branches,Domain(dom),Domain(ran))
+MarkovMap(branches::Vector{B},dom::D,ran::R) where {D<:Domain,R<:Domain,B<:ExpandingBranch}= MarkovMap{D,R,B}(branches,dom,ran)
+MarkovMap(branches::Vector{B},dom,ran) where {B<:ExpandingBranch} = MarkovMap(branches,convert(Domain,dom),convert(Domain,ran))
 
-function MarkovMap{B<:ExpandingBranch}(branches::AbstractVector{B},dom,ran)
-  domd = Domain(dom); randm = Domain(ran)
+function MarkovMap(branches::AbstractVector{B},dom,ran) where {B<:ExpandingBranch}
+  domd = convert(Domain,dom); randm = convert(Domain,ran)
   MarkovMap{typeof(domd),typeof(randm),B}(branches,domd,randm)
 end
 
+"""
+    MarkovMap(fs::Vector, ds::Vector, ran = coveringsegment(ds); dir=Forward, diff=autodiff(...)))
+
+Generate a MarkovMap with branches given by elements of `fs`` defined on subdomains given by `ds`, onto a vector `ran`.
+
+The keyword argument `dir` stipulates whether the elements of `fs` are the branches (`Forward`) or the branches' inverses (`Reverse`).
+
+The keyword argument `diff` provides the derivatives of the `fs`. By default it is the automatic derivatives of `fs`.
+"""
 function MarkovMap(fs::AbstractVector,ds::AbstractVector,ran=coveringsegment(ds);dir=Forward,
           diff=[autodiff(fs[i],(dir==Forward ? ds[i] : ran)) for i in eachindex(fs)])
   @assert length(fs) == length(ds)
-  randm=Domain(ran)
-  MarkovMap([branch(fs[i],Domain(ds[i]),randm,diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
-        coveringsegment(ds),Domain(ran))
+  randm=convert(Domain,ran)
+  MarkovMap([branch(fs[i],convert(Domain,ds[i]),randm,diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
+        coveringsegment(ds),convert(Domain,ran))
 end
 
 
 # TODO: MarkovMap not requiring branch entries?
 
-type IntervalMap{D<:Domain,R<:Domain,B<:AbstractBranch} <: AbstractIntervalMap{D,R}
+struct IntervalMap{D<:Domain,R<:Domain,B<:AbstractBranch} <: AbstractIntervalMap{D,R}
   branches::Vector{B}
   domain::D
   rangedomain::R
-  @compat function IntervalMap{D,R,B}(branches::Vector{B},dom::D,ran::R) where
+  @compat function IntervalMap{B,D,R}(branches::Vector{B},dom::D,ran::R) where
           {B<:ExpandingBranch, D<:Domain, R<:Domain}
     @assert all(b->issubset(b.domain,dom),branches)
     @assert all(b->issubset(b.rangedomain,ran),branches)
     new(branches,dom,ran)
   end
 end
-IntervalMap{B<:AbstractBranch}(branches::Vector{B},dom::Domain,ran::Domain) = IntervalMap{typeof(dom),typeof(ran),eltype(branches)}(branches,dom,ran)
-IntervalMap{B<:AbstractBranch}(branches::Vector{B},dom,ran) = IntervalMap(branches,Domain(dom),Domain(ran))
+IntervalMap(branches::Vector{B},dom::Domain,ran::Domain) where {B<:AbstractBranch} = IntervalMap{typeof(dom),typeof(ran),eltype(branches)}(branches,dom,ran)
+IntervalMap(branches::Vector{B},dom,ran) where {B<:AbstractBranch} = IntervalMap(branches,convert(Domain,dom),convert(Domain,ran))
 
-function IntervalMap{B<:ExpandingBranch}(branches::AbstractVector{B},dom,ran)
-  domd = Domain(dom); randm = Domain(ran)
+function IntervalMap(branches::AbstractVector{B},dom,ran) where {B<:ExpandingBranch}
+  domd = convert(Domain,dom); randm = convert(Domain,ran)
   IntervalMap{typeof(domd),typeof(randm),B}(branches,domd,randm)
 end
 
@@ -81,8 +97,8 @@ function IntervalMap(fs::AbstractVector,ds::AbstractVector,
           diff=[autodiff(fs[i],(dir==Forward ? ds[i] : ran)) for i in eachindex(fs)])
   @assert length(fs) == length(ds)
   @assert all(issubset(mapinterval(fs[i],ds[i]),ran) for i in eachindex(fs))
-  IntervalMap([branch(fs[i],Domain(ds[i]),mapinterval(fs[i],ds[i]),diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
-        coveringsegment(ds),Domain(ran))
+  IntervalMap([branch(fs[i],convert(Domain,ds[i]),mapinterval(fs[i],ds[i]),diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
+        coveringsegment(ds),convert(Domain,ran))
 end
 
 const SimpleBranchedMap{D<:Domain,R<:Domain,B<:AbstractBranch} = Union{MarkovMap{D,R,B},IntervalMap{D,R,B}} #?? ComposedMap
@@ -100,15 +116,32 @@ for TYP = (:MarkovMap, :IntervalMap)
   end
 end
 
+"""
+    branches(m)
+
+Return the branches of the map `m`.
+"""
 branches(m::SimpleBranchedMap) = m.branches
+
+"""
+    nbranches(m)
+
+Return the number of branches of `m`.
+"""
 nbranches(m::SimpleBranchedMap) = length(m.branches)
+
+"""
+    eachbranchindex(m)
+
+Return an iterator giving the indices of the branches of `m`
+"""
 eachbranchindex(m::SimpleBranchedMap) = 1:nbranches(m)
 
 neutralfixedpoints(m::SimpleBranchedMap) = [nfp(b) for b in branches(m)[isa.(NeutralBranch,branches(m))]]
 nneutral(m::SimpleBranchedMap) = sum([isa(b,NeutralBranch) for b in m.branches])
 getbranchind(m::SimpleBranchedMap,x) = temp_in(x,m.domain) ? findfirst([temp_in(x,domain(b)) for b in m.branches]) : error("DomainError: $x ∉ $(m.domain)")
 getbranchind(m::SimpleBranchedMap,x::IntervalDomain) = issubset(x,m.domain) ? findfirst([issubset(x,domain(b)) for b in m.branches]) : error("DomainError: $x ⊈ $(m.domain)")
-getbranchind(m::SimpleBranchedMap,x::Segment) = getbranchind(m,Domain(x))
+getbranchind(m::SimpleBranchedMap,x::Segment) = getbranchind(m,convert(Domain,x))
 branchindtype(m::SimpleBranchedMap) = Int
 
 # Transfer function
@@ -140,8 +173,8 @@ end
 end
 (of::FwdOffset)(x) = of.f(x)-of.offset
 
-function forwardmodulomap{ff}(f::ff,dom,ran=dom,diff=autodiff(f,dom))
-  domd = Domain(dom); randm = Domain(ran)
+function forwardmodulomap(f::ff,dom,ran=dom,diff=autodiff(f,dom)) where {ff}
+  domd = convert(Domain,dom); randm = convert(Domain,ran)
   fa = f(first(domd)); fb = f(last(domd))
   L = arclength(randm)
   nb_est = (fb-fa)/L; nb = round(Int,nb_est) # number of branches
@@ -151,7 +184,7 @@ function forwardmodulomap{ff}(f::ff,dom,ran=dom,diff=autodiff(f,dom))
   # @assert nb_est ≈ nb
   @assert nb != 0
 
-  breakpoints = Array{eltype(domd)}(NB+1)
+  breakpoints = Array{eltype(domd)}(undef,NB+1)
   breakpoints[1] = first(domd)
 
   for i = 1:NB-1
@@ -174,7 +207,7 @@ end
 reversemodulomap(args...) = _NI("reversemodulomap")
 # TODO
 # function reversemodulomap{ff}(v::ff,dom,ran=dom,diff=autodiff(v,dom);maxcover=10000)
-#   domd = Domain(dom); randm = Domain(ran)
+#   domd = convert(Domain,dom); randm = convert(Domain,ran)
 #   dr = arclength(randm); dd = arclength(domd)
 #   ra = first(randm); va = v(ra); vb = v()
 #   in(va,∂(domd)) || error("v($a) not in boundary of domain")
@@ -199,5 +232,10 @@ reversemodulomap(args...) = _NI("reversemodulomap")
 #   MarkovMap(vs,ds,randm,diff=dvdxs,dir=Reverse)
 # end
 
+"""
+    modulomap(f, D, R=dom; diff= autodiff(f,dom))
+
+Output MarkovMap or CircleMap m: D → R such that m(x) = f(x) mod R.
+"""
 modulomap(f,d,r=d;dir=Forward,diff=autodiff(f,dir==Forward ? d : r)) =
     dir == Forward ? forwardmodulomap(f,d,r,diff) : reversemodulomap(f,d,r,diff)

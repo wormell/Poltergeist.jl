@@ -1,7 +1,7 @@
 # Pkg.installed()["ApproxFun"] != v"0.4.0+" && Pkg.checkout("ApproxFun","4bcc8f585361184342bb21780cc6be9893d99ce6")
 using Poltergeist
 using Base.Test
-using ApproxFun
+using ApproxFun, LinearAlgebra
 
 f1(x)=2x+sin(2pi*x)/8pi; f2(x)=2x+sin(2pi*x)/8pi-1
 f1d(x)=2+cos(2pi*x)/4; f2d = f1d
@@ -183,17 +183,18 @@ println("Should be ≤2s")
 #   # @time pfull =
 # end
 
+# TODO: put back in on new ApproxFun release (>0.9.0)
 # 2D tests - in testing
-println("2D tests")
-using StaticArrays
-standardmap_inv_lift(x::SVector) = SVector(x[1] - 0.1*sin(x[2] - x[1]),x[2]-x[1]);
-standardmap_inv_diff(x::SVector) = SMatrix{2,2}(1,0,0,1); # As only determinant is important...
-dom = PeriodicInterval()^2
- # binv = branch(standardmap_inv_lift,standardmap_inv_diff,dom,dom,dir="rev"); # deprecated
-binv= branch(standardmap_inv_lift,dom,dom,standardmap_inv_diff,dir=Reverse)
-standardmap = MarkovMap([binv],dom,dom)
-L_standard = Transfer(standardmap)
-ApproxFun.resizedata!(L_standard,:,2)
+# println("2D tests")
+# using StaticArrays
+# standardmap_inv_lift(x::SVector) = SVector(x[1] - 0.1*sin(x[2] - x[1]),x[2]-x[1]);
+# standardmap_inv_diff(x::SVector) = SMatrix{2,2}(1,0,0,1); # As only determinant is important...
+# dom = PeriodicInterval()^2
+#  # binv = branch(standardmap_inv_lift,standardmap_inv_diff,dom,dom,dir="rev"); # deprecated
+# binv= branch(standardmap_inv_lift,dom,dom,standardmap_inv_diff,dir=Reverse)
+# standardmap = MarkovMap([binv],dom,dom)
+# L_standard = Transfer(standardmap)
+# ApproxFun.resizedata!(L_standard,:,2)
 
 println("")
 println("😎")

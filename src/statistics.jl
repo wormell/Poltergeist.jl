@@ -173,11 +173,7 @@ end
 
 Calculate Lyapunov exponent associated with f"""
 function lyapunov(f::AbstractMarkovMap,r=acim(f),sp=Space(rangedomain(f)))
-<<<<<<< HEAD
-  sum(Fun(x->transferfunction(x,f,x->log(abs(f'(x)))*r(x),cfstype(f)),sp))
-=======
   sum(Fun(x->transferfunction(x,f,x->log(abs(f'(x)))*r(x)),sp))
->>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
 end
 function lyapunov(K::SolutionInvWrapper)
   L = Transfer(K)
@@ -192,10 +188,6 @@ end
 (lc::LyapContainer)(x) = log(abs(lc.m'(x)))*lc.tr(x)
 
 function lyapunov(f::ComposedMarkovMap,r=acim(f))#,sp=Space(rangedomain(f)))
-<<<<<<< HEAD
-  T = cfstype(f)
-=======
->>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
   tr = copy(r)
   lyap = sum(Fun(x->transferfunction(x,f.maps[end],LyapContainer(f.maps[end],tr)),rangedomain(f.maps[end])))
   for k = complength(f)-1:-1:1

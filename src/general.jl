@@ -37,9 +37,10 @@ Base.promote_rule(::Type{T},::Type{InterpolationNode{S}}) where {T<:Number,S<:Sp
 Base.show(p::InterpolationNode) = show(convert(Nu))
 ApproxFun.space(p::InterpolationNode) = p.sp
 ApproxFun.domain(p::InterpolationNode) = domain(p.sp)
+# eltype(p::InterpolationNode) = eltype(p.sp)
 ApproxFun.prectype(p::InterpolationNode) = prectype(p.sp)
 
-Base.zero(p::InterpolationNode) = zero(prectype(p))
+# Base.zero(p::InterpolationNode) = zero(eltype(p))
 
 # Circle domains
 
@@ -48,10 +49,10 @@ domain_mod(x,p::PeriodicInterval) = interval_mod(x,p.a,p.b)
 
 # Interval domains
 
-coveringsegment{T<:Domain}(dsm::AbstractArray{T}) = Segment(minimum(first(Domain(d)) for d in dsm),maximum(last(Domain(d)) for d in dsm))
-coveringsegment(ds::AbstractArray) = coveringsegment([Domain(d) for d in ds])
+coveringsegment(dsm::AbstractArray{T}) where {T<:Domain} = Segment(minimum(first(convert(Domain,d)) for d in dsm),maximum(last(convert(Domain,d)) for d in dsm))
+coveringsegment(ds::AbstractArray) = coveringsegment([convert(Domain,d) for d in ds])
 mapinterval(f,d::Domain) = Interval(extrema((f(first(d)),f(last(d))))...)
-mapinterval(f,d) = mapinterval(f,Domain(d))
+mapinterval(f,d) = mapinterval(f,convert(Domain,d))
 
 # Newton's method
 

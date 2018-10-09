@@ -46,11 +46,8 @@ end
   va::T
   vb::T
 end
-<<<<<<< HEAD
+
 function RevCircleMap(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm), maxcover=10000) where {D<:Domain,R<:Domain,ff,gg}
-=======
-function RevCircleMap{D<:Domain,R<:Domain,ff,gg}(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm),maxcover=10000)
->>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
   # @assert isempty(∂(ran)) isempty(∂(dom))
   ra = first(randm); va = v(ra)
   dr = arclength(randm); dd = arclength(domd)
@@ -61,11 +58,7 @@ function RevCircleMap{D<:Domain,R<:Domain,ff,gg}(v::ff,domd::D,randm::R,dvdx::gg
     abs(vr) > dd && error("Inverse lift doesn't appear to have an inverse")
     cover += 1
   end
-<<<<<<< HEAD
   cover == maxcover && error("Can't get to the end of the inverse lift after $maxcover steps")
-=======
-  cover == maxcover && error("Can't get to the end of the inverse lift after 10000 steps")
->>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
 
   RevCircleMap{D,R,ff,gg,typeof(va)}(v,dvdx,domd,randm,cover,va,v(last(randm)))
 end

@@ -69,18 +69,13 @@ end
 
 nbranches(C::ComposedMarkovMap) = prod(nbranches(mm for mm in C.maps))
 eachbranchindex(C::ComposedMarkovMap) = product(eachbranchindex(mm) for mm in C.maps)
-branchindtype(C::ComposedMarkovMap) = Array{promote_type([branchindtype(mm) for mm in C.maps]...)}
+branchindtype(C::ComposedMarkovMap) = Array{promote_type([branchindtype(mm) for mm in C.maps]...),1}
 nneutral(C::ComposedMarkovMap) = 0 # assume we can't do this
 neutralfixedpoints(C::ComposedMarkovMap) = []
 
 #TODO: must be faster??
-<<<<<<< HEAD
-function transferfunction(x,m::ComposedMarkovMap{Tuple{M}},f,T) where {M<:AbstractMarkovMap}
-  transferfunction(x,m.maps[1],f,T)
-=======
-function transferfunction{M<:AbstractMarkovMap}(x,m::ComposedMarkovMap{Tuple{M}},f)
+function transferfunction(x,m::ComposedMarkovMap{Tuple{M}},f) where {M<:AbstractMarkovMap}
   transferfunction(x,m.maps[1],f)
->>>>>>> 4c33d1554aa02b6a20399f0090f695de8ad3e517
 end
 
 struct TransferCall{M<:AbstractMarkovMap,ff}
