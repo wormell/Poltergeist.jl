@@ -133,7 +133,7 @@ covariancefunction(lan,A,100)
 
 # Calling
 println("Newton's method test ☏")
-test_f = linspace(d2.a,d2.b,20)[1:end-1] # map boundaries are dodgy because multivalued
+test_f = range(d2.a,stop=d2.b,length=20)[1:end-1] # map boundaries are dodgy because multivalued
 test_x = [Poltergeist.mapinv(M2b,1,tf) for tf in test_f]
  @test M2b.(test_x) ≈ test_f
  @test M1b.(test_x) ≈ test_f
