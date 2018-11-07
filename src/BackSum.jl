@@ -18,7 +18,7 @@ function backsumrecursion(SQ::BackSumEval, x::HofbauerPoint{T}, dv, n, depthleft
     im = SQ.S.im
     backsum = zero(T)
     # TODO: accomodate NeutralBranch
-    for e in bedgelist(im.he, x.graphind)
+    for e in bedge(im.he, x.graphind)
         (nx, dvprod) = mapinvP(im.he, e, x)
         ndv = abs(dv)*dvprod # check this is OK for neutral branches
         is_d_ind = nx.graphind == im.d_ind

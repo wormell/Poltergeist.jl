@@ -1,3 +1,5 @@
+export hofbauerextension
+
 """
     HofbauerDomain
 
@@ -9,7 +11,7 @@ struct HofbauerDomain{D<:Domain}
     depth::Int
 end
 show(io::IO, d::HofbauerDomain) = print(io, "$(d.domain) at depth $(d.depth)")
-convert(Domain,d::HofbauerDomain) = d.domain
+convert(::Type{Domain},d::HofbauerDomain) = d.domain
 
 maxrangedomain(m::AbstractIntervalMap) =
     rangedomain(branches(m)[findmax(arclength.(rangedomain.(branches(m))))[2]])
@@ -111,13 +113,13 @@ The keyword `maxdepth` says how deep the Hofbauer extension should go, and
 `Segment(0.,0.5)` might map to `Segment(0.,1.)`` for a given map if `forcereturn=false` but would map to
 Segment(0,0.3)` and `Segment(0.3,1)` if `forcereturn=true`.
 """
-function hofbauerextension(m::AbstractIntervalMap,basedoms=(maxrangedomain(m));maxdepth=100,forcereturn=trues(length(basedoms)))
+function hofbauerextension(m::AbstractIntervalMap,basedoms=(maxrangedomain(m),);maxdepth=100,forcereturn=trues(length(basedoms)))
     @assert domain(m) == rangedomain(m)
 
     G = HofbauerExtension{Int,HofbauerDomain}(m)
     for (n,bd) in enumerate(basedoms)
-        basehdom = Hofbauerconvert(Domain,convert(Domain,bd),1)
-        add_vertex!(G,basehdom,forcereturn[n])
+        basehdom = HofbauerDomain(convert(Domain,bd),1)
+        add_vertex!(G,basehdom;forcereturn=forcereturn[n])
     end
 
     i = 1
@@ -127,11 +129,12 @@ function hofbauerextension(m::AbstractIntervalMap,basedoms=(maxrangedomain(m));m
     end
 
     D = promote_type(collect(typeof(h.domain) for h in hdomains(G))...)
-    # HofbauerExtension(ne(G),fedgelist(G),bedgelist(G),getmap(G),
+    # HofbauerExtension(ne(G),fedge(G),bedge(G),getmap(G),
     #     convert(Vector{HofbauerDomain{D}},hdomains(G)))
     G
 end
-
+hofbauerextension(m::AbstractIntervalMap,basedoms::Union{Domain,IntervalSets.ClosedInterval};maxdepth=100,forcereturn=trues(length(basedoms))) =
+    hofbauerextension(m,(basedoms,);maxdepth=maxdepth,forcereturn=forcereturn)
 
 # walks through domains in HofbauerExtension
 function towerwalk!(G::HofbauerExtension, graphind, hdom)
@@ -164,11 +167,10 @@ end
 function towerextend!(G::HofbauerExtension, graphind, hdom, newdom, branchind, isnfp)
     arclength(newdom) < 300eps(arclength(convert(Domain,hdom))) && return true
     newgraphind = findfirst(collect(h.domain≈newdom for h in hdomains(G)))
-    addgraphind = (newgraphind == 0) # does the new domain already exist
 
-    # add new domain if necessary
-    if addgraphind
-        newhdom = Hofbauerconvert(Domain,newdom,hdom.depth+1)
+    # add new domain if it doesn't already exist
+    if newgraphind isa Nothing
+        newhdom = HofbauerDomain(newdom,hdom.depth+1)
         add_vertex!(G,newhdom)
         newgraphind = nv(G)
     end

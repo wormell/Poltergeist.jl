@@ -1,5 +1,5 @@
 # MarkovMaps
-export MarkovMap, IntervalMap, branch, nbranches, modulomap, induce, CircleMap
+export MarkovMap, IntervalMap, branch, nbranches, modulomap, CircleMap
 
 @compat abstract type AbstractIntervalMap{D<:Domain,R<:Domain} end# <: Function
 @compat abstract type AbstractMarkovMap{D<:Domain,R<:Domain} <: AbstractIntervalMap{D,R} end# <: Function
@@ -77,7 +77,7 @@ struct IntervalMap{D<:Domain,R<:Domain,B<:AbstractBranch} <: AbstractIntervalMap
   branches::Vector{B}
   domain::D
   rangedomain::R
-  @compat function IntervalMap{B,D,R}(branches::Vector{B},dom::D,ran::R) where
+  @compat function IntervalMap{D,R,B}(branches::Vector{B},dom::D,ran::R) where
           {B<:ExpandingBranch, D<:Domain, R<:Domain}
     @assert all(b->issubset(b.domain,dom),branches)
     @assert all(b->issubset(b.rangedomain,ran),branches)
@@ -95,10 +95,11 @@ end
 function IntervalMap(fs::AbstractVector,ds::AbstractVector,
           ran=coveringsegment([mapinterval(fs[i],ds[i]) for i in eachindex(fs)]);dir=Forward,
           diff=[autodiff(fs[i],(dir==Forward ? ds[i] : ran)) for i in eachindex(fs)])
+  rand = convert(Domain,ran)
   @assert length(fs) == length(ds)
-  @assert all(issubset(mapinterval(fs[i],ds[i]),ran) for i in eachindex(fs))
+  @assert all(issubset(mapinterval(fs[i],ds[i]),rand) for i in eachindex(fs))
   IntervalMap([branch(fs[i],convert(Domain,ds[i]),mapinterval(fs[i],ds[i]),diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
-        coveringsegment(ds),convert(Domain,ran))
+        coveringsegment(ds),rand)
 end
 
 const SimpleBranchedMap{D<:Domain,R<:Domain,B<:AbstractBranch} = Union{MarkovMap{D,R,B},IntervalMap{D,R,B}} #?? ComposedMap

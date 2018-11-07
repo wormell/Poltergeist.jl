@@ -2,11 +2,15 @@ module HGraphs
 
 using ApproxFun
 using LightGraphs
+import LightGraphs: has_vertex, add_vertex!, has_edge, #fedgelist, bedgelist,
+    inneighbors, outneighbors, is_directed, add_edge!, rem_edge!,
+    ne, nv, vertices, src, dst
 import LightGraphs.SimpleGraphs, Poltergeist
+import LightGraphs.SimpleGraphs: fadj, badj
 import Poltergeist: AbstractIntervalMap
 import Base: show
 export HofbauerEdge, HofbauerExtension, hdomains, domains, isnfp, getmap
-export fedgelist, bedgelist, branchind
+export fedge, bedge, branchind
 # code modified from LightGraphs.jl
 
 """
@@ -36,9 +40,7 @@ Base.isless(e::HEdge{I},f::HEdge{I}) where I =
 
 # for splicing
 Base.length(::HEdge) = 1
-Base.start(x::HEdge) = false
-Base.next(x::HEdge, state) = (x, true)
-Base.done(x::HEdge, state) = state
+Base.iterate(x::HEdge, state=false) = state ? nothing : (x, true)
 
 ### from SimpleGraphs/simpledigraph.jl
 
@@ -54,18 +56,19 @@ show(io::IO, h::HofbauerExtension) = print(io,
     "Hofbauer extension of $(getmap(h)) of size {$(nv(h)), $(ne(h))}")
 
 eltype(x::HofbauerExtension) = Int # for graph compatibiltiy
+zero(h::HofbauerExtension{I}) where I = HofbauerExtension(0,Vector{HEdge{I}}[],Vector{HEdge{I}}[],h.m,h.hdomains,h.returnto)
 
-HofbauerExtension{I,D}(m::AbstractIntervalMap) where I where D = HofbauerExtension(0, Vector{HEdge{I}}[], Vector{HEdge{I}}[],m,D[],Int[])
+HofbauerExtension{I,D}(m::AbstractIntervalMap) where {I,D} = HofbauerExtension(0, Vector{HEdge{I}}[], Vector{HEdge{I}}[],m,D[],Int[])
 HofbauerExtension(m::AbstractIntervalMap) = HofbauerExtension{Int,Segment{Float64}}(m)
-HofbauerExtension(::Type{T},::Type{D},m::AbstractIntervalMap) where T where D = HofbauerExtension{T,D}(m)
+HofbauerExtension(::Type{T},::Type{D},m::AbstractIntervalMap) where {T,D} = HofbauerExtension{T,D}(m)
 
 edgetype(::HofbauerExtension{T}) where T<: Integer = HEdge{T}
 getmap(g::HofbauerExtension) = g.m
 
-fedgelist(g::HofbauerExtension) = g.fedgelist
-fedgelist(g::HofbauerExtension,v) = fedgelist(g)[v]
-bedgelist(g::HofbauerExtension) = g.bedgelist
-bedgelist(g::HofbauerExtension,v) = bedgelist(g)[v]
+fedge(g::HofbauerExtension) = g.fedgelist
+fedge(g::HofbauerExtension,v) = fedge(g)[v]
+bedge(g::HofbauerExtension) = g.bedgelist
+bedge(g::HofbauerExtension,v) = bedge(g)[v]
 hdomains(g::HofbauerExtension) = g.hdomains
 domains(g::HofbauerExtension) = Domain.(hdomains(g))
 
@@ -81,8 +84,8 @@ outneighbors(g::HofbauerExtension, v::Integer) = fadj(g, v)
 ==(g::HofbauerExtension, h::HofbauerExtension) =
     vertices(g) == vertices(h) &&
     ne(g) == ne(h) &&
-    fedgelist(g) == fedgelist(h) &&
-    bedgelist(g) == bedgelist(h) &&
+    fedge(g) == fedge(h) &&
+    bedge(g) == bedge(h) &&
     hdomains(g) == hdomains(h)
 
 is_directed(g::HofbauerExtension) = true
@@ -93,7 +96,7 @@ is_directed(::Type{HofbauerExtension{I,D,M}}) where I where D where M = true
 
 function SimpleDiGraph(g::HofbauerExtension)
     sg = SimpleDiGraph{Int}(nv(g))
-    for el in fedgelist(g)
+    for el in fedge(g)
         for e in el
             add_edge!(sg,SimpleEdge(e))
         end
@@ -126,7 +129,7 @@ function rem_edge!(g::HofbauerExtension, e::HEdge)
 end
 
 
-function add_vertex!(g::HofbauerExtension{I,D},d::D,forcereturn=true) where I where D
+function add_vertex!(g::HofbauerExtension{I,D},d::D;forcereturn=true) where I where D
     (nv(g) + 1 <= nv(g)) && return false       # test for overflow
     push!(g.bedgelist, Vector{I}())
     push!(g.fedgelist, Vector{I}())
@@ -140,16 +143,16 @@ function has_edge(g::HofbauerExtension, e::HEdge)
     u, v = e.src, e.dst
     (u > nv(g) || v > nv(g)) && return false
     if degree(g, u) < degree(g, v)
-        return insorted(v, fedgelist(g, u))
+        return insorted(v, fedge(g, u))
     else
-        return insorted(u, bedgelist(g, v))
+        return insorted(u, bedge(g, v))
     end
 end
 
 ### from SimpleGraphs/SimpleGraphs.jl
 
 ne(g::HofbauerExtension) = g.ne
-nv(g::HofbauerExtension) = length(fedgelist(g))
+nv(g::HofbauerExtension) = length(fedge(g))
 vertices(g::HofbauerExtension) = 1:nv(g)
 end
 using Poltergeist.HGraphs

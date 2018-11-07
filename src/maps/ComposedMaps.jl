@@ -1,3 +1,4 @@
+## TODO: roll into InducedMap work?
 struct ComposedMarkovMap{T<:Tuple,D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
   maps::T
   domain::D

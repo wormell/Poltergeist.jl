@@ -1,3 +1,5 @@
+export induce, InducedMap
+
 struct InducedMap{M<:AbstractIntervalMap, D<:Domain, R<:Domain, HD, I} <: AbstractMarkovMap{D,R}
     he::HofbauerExtension{I,HD,M}
     domain::D
@@ -15,22 +17,22 @@ end
 function InducedMap(he::HofbauerExtension, domain::Domain, rangedomain::Domain)
     @assert domain ∈ domains.(he)
     @assert rangedomain ∈ domains.(he)
-    InducedMap(he, domain, rangedomain, findfirst(domains.(he),domain),
-        findfirst(domains.(he),rangedomain))
+    InducedMap(he, domain, rangedomain, something(findfirst(isequal(domain),domains.(he))),
+        something(findfirst(isequal(rangedomain),domains.(he))))
 end
 
-InducedMap(he::HofbauerExtension,d_ind::Int,r_ind::Int) =
+InducedMap(he::HofbauerExtension,d_ind::Integer,r_ind::Integer) =
     InducedMap(he,convert(Domain,hdomains(he)[d_ind]),convert(Domain,hdomains(he)[r_ind]),d_ind,r_ind)
 InducedMap(he::HofbauerExtension,d,r) = InducedMap(he,convert(Domain,d),convert(Domain,r))
 InducedMap(he::HofbauerExtension,d) = InducedMap(he,d,d)
 InducedMap(he::HofbauerExtension) = InducedMap(he,1,1)
 
 InducedMap(m::AbstractIntervalMap;maxdepth=100,forcereturn=true) = InducedMap(hofbauerextension(m;maxdepth=maxdepth,forcereturn=forcereturn))
-InducedMap(m::AbstractIntervalMap,d;maxdepth=100,forcereturn=trues(length(d))) = InducedMap(hofbauerextension(m,d;maxdepth=maxdepth,forcereturn=forcereturn),d)
+InducedMap(m::AbstractIntervalMap,d;maxdepth=100,forcereturn=trues(d)) = InducedMap(hofbauerextension(m,d;maxdepth=maxdepth,forcereturn=forcereturn),d)
 #length(d::Interval) not defined so:
-InducedMap(m::AbstractIntervalMap,d::ClosedInterval;maxdepth=100,forcereturn=true) = InducedMap(hofbauerextension(m,convert(Domain,d);maxdepth=maxdepth,forcereturn=forcereturn),d)
+InducedMap(m::AbstractIntervalMap,d::Union{Domain,ClosedInterval};maxdepth=100,forcereturn=true) = InducedMap(hofbauerextension(m,convert(Domain,d);maxdepth=maxdepth,forcereturn=forcereturn),d)
 
-induce(m::AbstractIntervalMap,args...) = InducedMap(m)
+induce(m::AbstractIntervalMap,args...) = InducedMap(m, args...)
 
 Base.show(io::IO, i::InducedMap) = print(io, "Induced map on $(i.domain)→$(i.rangedomain) of $(i.he.m)")
 

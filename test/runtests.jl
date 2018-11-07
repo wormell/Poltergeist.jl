@@ -1,7 +1,8 @@
 # Pkg.installed()["ApproxFun"] != v"0.4.0+" && Pkg.checkout("ApproxFun","4bcc8f585361184342bb21780cc6be9893d99ce6")
 using Poltergeist
-using Base.Test
-using ApproxFun, LinearAlgebra
+using Test
+using ApproxFun, LinearAlgebra, LightGraphs
+using Base.MathConstants
 
 f1(x)=2x+sin(2pi*x)/8pi; f2(x)=2x+sin(2pi*x)/8pi-1
 f1d(x)=2+cos(2pi*x)/4; f2d = f1d
@@ -103,7 +104,7 @@ println("Should be ≤0.01s")
 # @time lyapunov(lanpet)
 
 # Eigvals test
-println("Eigenvalue test")
+println("Eigenvalue test 🔢")
 c = 1/π
 intervalmap = MarkovMap([x->sin(c*asin(x)),x->sin(c+(1-c)*asin(x))],[0..sin(c),sin(c)..sin(1.)],dir=Reverse)
 eigs(intervalmap,100)
@@ -140,7 +141,18 @@ test_x = [Poltergeist.mapinv(M2b,1,tf) for tf in test_f]
  @test M2b'.(test_x) ≈ M1b'.(test_x)
 
 # #Inducing
-# println("Inducing tests 🐴")
+println("Inducing tests 🐴")
+f = IntervalMap([x->φ*x,x->φ*x-1],[0..φ-1,φ-1..1],0..1)
+# r = e-2
+he = hofbauerextension(f,Segment(φ-1..1),forcereturn=true)
+@test nv(he) == 2
+@test ne(he) == 3
+fi = InducedMap(he)
+Lfi = Transfer(fi)
+@time Lfi[:,10]
+println("Should be ≤ ? s")
+# println(diag(Lfi[1:10,1:10]), 1 ./ (φ.^(1:10) - 1) ./ φ.^(1:10))
+@test all(diag(Lfi[1:10,1:10]) .≈ 1 ./ (φ.^(1:10) - 1) ./ φ.^(1:10))
 # M2bd = MarkovMap([fv1,fv2],[0..0.5,0.5..1],d2,dir=Reverse,diff=[fv1d,fv2d]);
 # M2bi = induce(M2bd,1)
 # # acim(M2bi)
