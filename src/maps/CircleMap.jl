@@ -13,7 +13,7 @@
 end
 function FwdCircleMap(f::ff,domd::D,randm::R,dfdx::gg=autodiff(f,domd)) where {D<:PeriodicDomain,R<:PeriodicDomain,ff,gg}
   # @assert isempty(∂(randm)) isempty(∂(domd))
-  fa = f(first(domd)); fb = f(last(domd))
+  fa = f(leftendpoint(domd)); fb = f(rightendpoint(domd))
   cover_est = (fb-fa)/arclength(randm)
   cover_integer = round(Int,cover_est)
   cover_est ≈ cover_integer || error("Circle map lift does not have integer covering number.")
@@ -49,7 +49,7 @@ end
 
 function RevCircleMap(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm), maxcover=10000) where {D<:Domain,R<:Domain,ff,gg}
   # @assert isempty(∂(ran)) isempty(∂(dom))
-  ra = first(randm); va = v(ra)
+  ra = leftendpoint(randm); va = v(ra)
   dr = arclength(randm); dd = arclength(domd)
   cover = 1; vr = v(ra+dr)-va
   while (abs(vr) <= dd && cover < maxcover)
@@ -60,7 +60,7 @@ function RevCircleMap(v::ff,domd::D,randm::R,dvdx::gg=autodiff(v,randm), maxcove
   end
   cover == maxcover && error("Can't get to the end of the inverse lift after $maxcover steps")
 
-  RevCircleMap{D,R,ff,gg,typeof(va)}(v,dvdx,domd,randm,cover,va,v(last(randm)))
+  RevCircleMap{D,R,ff,gg,typeof(va)}(v,dvdx,domd,randm,cover,va,v(rightendpoint(randm)))
 end
 function RevCircleMap(v::ff,dom,ran=dom,dvdx::gg=autodiff(v,ran)) where {ff,gg}
   domd = convert(PeriodicDomain,dom); randm = convert(PeriodicDomain,ran)

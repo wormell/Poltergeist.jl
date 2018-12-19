@@ -1,5 +1,5 @@
 using Poltergeist, Plots, ApproxFun; pyplot()
-d = Segment(0,1);
+d = Interval(0,1);
 M1(x) = 2x+sin(2pi*x)/6; M2(x) = 2-2x
 M = MarkovMap([M1,M2],[0..0.5,0.5..1]);
 L = Transfer(M)

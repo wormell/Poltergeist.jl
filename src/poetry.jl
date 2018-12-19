@@ -35,7 +35,7 @@ Base.adjoint(b::AbstractMarkovMap) = MarkovMapDerivative(b)
 Construct a self-map on domain d: x ↦ x + ϵ X(x)
 """
 perturb(d,X,ϵ) = perturb(convert(Domain,d),X,ϵ)
-perturb(d::IntervalDomain,X,ϵ) = MarkovMap([x->x+ϵ*X(x)],[d],d)
+perturb(d::AbstractInterval,X,ϵ) = MarkovMap([x->x+ϵ*X(x)],[d],d)
 perturb(d::PeriodicDomain,X,ϵ) = FwdCircleMap([x->x+ϵ*X(x)],d)
 
 """

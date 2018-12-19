@@ -58,7 +58,7 @@ mapinvD(c::ComposedMarkovMap,b,x) = mapinvP(c,b,x)[2]
 # TODO: map(P,D)(c,b,x)
 
 function getbranchind(m::ComposedMarkovMap,x)
-  temp_in(x,m.domain) || error("DomainError: $x ∉ $(m.domain)")
+  x ∈ m.domain || error("DomainError: $x ∉ $(m.domain)")
   fx = x
   br = getbranchind(m.maps[end],fx)
   for i = complength(c)-1:-1:1

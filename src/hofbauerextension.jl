@@ -109,9 +109,9 @@ The keyword `maxdepth` says how deep the Hofbauer extension should go, and
 `forcereturn` sets whether a return to given members of `basedomains` should
  forced if possible.
 
- For example, in the case of `f(x) = mod(2x,1)`, if `basedomains` is set to `Segment(0.,0.3)` then
-`Segment(0.,0.5)` might map to `Segment(0.,1.)`` for a given map if `forcereturn=false` but would map to
-Segment(0,0.3)` and `Segment(0.3,1)` if `forcereturn=true`.
+ For example, in the case of `f(x) = mod(2x,1)`, if `basedomains` is set to `Interval(0.,0.3)` then
+`Interval(0.,0.5)` might map to `Interval(0.,1.)`` for a given map if `forcereturn=false` but would map to
+Interval(0,0.3)` and `Interval(0.3,1)` if `forcereturn=true`.
 """
 function hofbauerextension(m::AbstractIntervalMap,basedoms=(maxrangedomain(m),);maxdepth=100,forcereturn=trues(length(basedoms)))
     @assert domain(m) == rangedomain(m)
@@ -133,7 +133,7 @@ function hofbauerextension(m::AbstractIntervalMap,basedoms=(maxrangedomain(m),);
     #     convert(Vector{HofbauerDomain{D}},hdomains(G)))
     G
 end
-hofbauerextension(m::AbstractIntervalMap,basedoms::Union{Domain,IntervalSets.ClosedInterval};maxdepth=100,forcereturn=trues(length(basedoms))) =
+hofbauerextension(m::AbstractIntervalMap,basedoms::Domain;maxdepth=100,forcereturn=trues(length(basedoms))) =
     hofbauerextension(m,(basedoms,);maxdepth=maxdepth,forcereturn=forcereturn)
 
 # walks through domains in HofbauerExtension
@@ -143,30 +143,30 @@ function towerwalk!(G::HofbauerExtension, graphind, hdom)
     for branchind in eachbranchindex(m)
         b = branches(m)[branchind]
         bdom = domain(b)
-        capdom = bdom ∩ hdom.domain
-        if ~isempty(capdom) # hdom is partially contained in the domain of b
+        capdom = bdom ∩ convert(Domain,hdom)
+        if ~isempty(capdom) && arclength(capdom) > 0 # hdom is partially contained in the domain of b
             if isa(b,NeutralBranch) #&& (neutralfixedpoint(b) ∈ capdom) # inducing at a neutral fixed point
                 isnfp = true
-                newdom = rangedomain(b) \ ((bdom ≈ capdom) ? domain(b) : b(capdom))
+                newdom = rangedomain(b) \ (atol_isapprox(bdom,capdom) ? domain(b) : b(capdom))
             else # normal bounce inducing
                 isnfp = false
-                newdom = (bdom ≈ capdom) ? rangedomain(b) : b(capdom)
+                newdom = atol_isapprox(bdom,capdom) ? rangedomain(b) : b(capdom)
             end
             for i in G.returnto
                 forcedom = convert(Domain,hdomains(G)[i])
-                if issubset(forcedom,newdom)
+                if approx_issubset(forcedom,newdom)
                     towerextend!(G, graphind, hdom, forcedom, branchind, isnfp)
                     newdom = newdom \ forcedom
                 end
             end
-            towerextend!(G, graphind, hdom, newdom, branchind, isnfp)
+            arclength(newdom) > 0 && towerextend!(G, graphind, hdom, newdom, branchind, isnfp)
         end
     end
 end
 
 function towerextend!(G::HofbauerExtension, graphind, hdom, newdom, branchind, isnfp)
     arclength(newdom) < 300eps(arclength(convert(Domain,hdom))) && return true
-    newgraphind = findfirst(collect(h.domain≈newdom for h in hdomains(G)))
+    newgraphind = findfirst(collect(atol_isapprox(h.domain,newdom) for h in hdomains(G)))
 
     # add new domain if it doesn't already exist
     if newgraphind isa Nothing

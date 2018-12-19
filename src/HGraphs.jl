@@ -59,7 +59,7 @@ eltype(x::HofbauerExtension) = Int # for graph compatibiltiy
 zero(h::HofbauerExtension{I}) where I = HofbauerExtension(0,Vector{HEdge{I}}[],Vector{HEdge{I}}[],h.m,h.hdomains,h.returnto)
 
 HofbauerExtension{I,D}(m::AbstractIntervalMap) where {I,D} = HofbauerExtension(0, Vector{HEdge{I}}[], Vector{HEdge{I}}[],m,D[],Int[])
-HofbauerExtension(m::AbstractIntervalMap) = HofbauerExtension{Int,Segment{Float64}}(m)
+HofbauerExtension(m::AbstractIntervalMap) = HofbauerExtension{Int,Interval{Float64}}(m)
 HofbauerExtension(::Type{T},::Type{D},m::AbstractIntervalMap) where {T,D} = HofbauerExtension{T,D}(m)
 
 edgetype(::HofbauerExtension{T}) where T<: Integer = HEdge{T}

@@ -13,7 +13,7 @@ end
 
 @compat const PureLaurent{D<:Domain} = Hardy{false,D}
 
-@compat const GeneralInterval = Union{Segment,PeriodicInterval}
+@compat const GeneralInterval = Union{Segment,Interval,PeriodicSegment}
 
 # rem()
 
@@ -45,18 +45,29 @@ ApproxFun.prectype(p::InterpolationNode) = prectype(p.sp)
 # Circle domains
 
 interval_mod(x,a,b) = (b-a)*mod((x-a)/(b-a),1)+a
-domain_mod(x,p::PeriodicInterval) = interval_mod(x,p.a,p.b)
+domain_mod(x,p::PeriodicSegment) = interval_mod(x,leftendpoint(p),rightendpoint(p))
 
 # Interval domains
 
-coveringsegment(dsm::AbstractArray{T}) where {T<:Domain} = Segment(minimum(first(convert(Domain,d)) for d in dsm),maximum(last(convert(Domain,d)) for d in dsm))
-coveringsegment(ds::AbstractArray) = coveringsegment([convert(Domain,d) for d in ds])
-mapinterval(f,d::Domain) = Interval(extrema((f(first(d)),f(last(d))))...)
+function approx_in(x,d::GeneralInterval; atol=50eps(arclength(d)), kwargs...)
+    x <= rightendpoint(d)+atol && x >= leftendpoint(d) - atol
+end
+approx_in(x,d) = approx_in(convert(typeof(d),x),d)
+
+function approx_issubset(a,b;kwargs...)
+    acupb = a∪b
+    atol_isapprox(acupb,b;kwargs...)
+end
+
+atol_isapprox(a,b; atol=50eps(max(arclength(a),arclength(b))), kwargs...) = isapprox(a,b;atol=atol,kwargs...)
+coveringinterval(dsm::AbstractArray{T}) where {T<:AbstractInterval} = Interval(minimum(leftendpoint(convert(Domain,d)) for d in dsm),maximum(rightendpoint(convert(Domain,d)) for d in dsm))
+coveringinterval(ds::AbstractArray) = coveringinterval([convert(Domain,d) for d in ds])
+mapinterval(f,d::T) where T<:GeneralInterval = T(extrema((f(leftendpoint(d)),f(rightendpoint(d))))...)
 mapinterval(f,d) = mapinterval(f,convert(Domain,d))
 
 # Newton's method
 
-domain_newton(f,df,y::U,D::Domain,x::U=convert(U,rand(D)),tol=400eps(eltype(U))) where U = basic_newton(f,df,y,x,tol)
+domain_newton(f,df,y::U,D::Domain,x::U=convert(U,ApproxFun.checkpoints(D)[1]),tol=400eps(eltype(U))) where U = basic_newton(f,df,y,x,tol)
 domain_guess(x,dom::Domain,ran::Domain) = rand(ran)
 
 domain_guess(x::SVector{N},dom::ProductDomain,ran::ProductDomain) where N = SVector{N}([interval_guess(x[i],dom.domains[i],ran.domains[i]) for i =1:N])
@@ -131,14 +142,14 @@ function interval_newton(f,df,y::U,da::T,db::T,x::U=(da+db)/2,tol=40eps(max(abs(
   abs(rem) > tol && error("Newton: failure to converge: y = $y, x estimate = $x, rem = $rem")
   x
 end
-function domain_newton(f,df,y::U,D::GeneralInterval,x::U=(D.a+D.b)/2,
-            tol=40eps(max(abs(D.a),abs(D.b)))) where U<:Union{Real,Complex}
+function domain_newton(f,df,y::U,D::GeneralInterval,x::U=(leftendpoint(D)+rightendpoint(D))/2,
+            tol=40eps(max(leftendpoint(D),rightendpoint(D)))) where U<:Union{Real,Complex}
     # x = convert(U,x);
-    interval_newton(f,df,y,D.a,D.b,x,tol)
+    interval_newton(f,df,y,leftendpoint(D),rightendpoint(D),x,tol)
 end
 
 interval_guess(y::Number,dom::Domain,ran::Domain) =
-    (dom.a*ran.b-ran.a*dom.b+y*(dom.b-dom.a))/(ran.b-ran.a)
+    (leftendpoint(dom)*rightendpoint(ran)-leftendpoint(ran)*rightendpoint(dom)+y*(rightendpoint(dom)-leftendpoint(dom)))/(rightendpoint(ran)-leftendpoint(ran))
 domain_guess(y::Number,dom::GeneralInterval,ran::GeneralInterval) =
     interval_guess(y,dom,ran)
 

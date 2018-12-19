@@ -10,9 +10,9 @@ f1d(x)=2+cos(2pi*x)/4; f2d = f1d
 fv1(x) = x/2+sin(2pi*x)/8pi; fv2(x) = x/2+1/2+sin(2pi*x)/8pi
 fv1d(x) = 1/2+cos(2pi*x)/4; fv2d = fv1d
 
-#Periodic domain
+# Periodic domain
 println("Fourier tests 🌚🌞")
-d1 = PeriodicInterval(0,1.)
+d1 = PeriodicSegment(0,1.)
 M1b = CircleMap(fv1,d1,dir="rev",diff=fv1d)
 L1b = Transfer(M1b)
 @time L1b = Transfer(M1b)
@@ -32,8 +32,8 @@ println("Should all be ≤0.3s")
 
 # Non-periodic domain
 println("Chebyshev tests 🌳")
-d2 = Segment(0..1.)
-@test Poltergeist.coveringsegment([0..0.5,0.5..1]) == d2
+d2 = (0..1.)::Interval
+@test Poltergeist.coveringinterval([0..0.5,0.5..1]) == d2
 M2b = MarkovMap([fv1,fv2],[0..0.5,0.5..1],dir=Reverse,diff=[fv1d,fv2d]);
 acim(M2b)
 @time ρ2b = acim(M2b)
@@ -60,14 +60,14 @@ println("Lanford map test")
 lan = lanford()
 K = SolutionInv(lan);
 rho = acim(K);
-l_exp = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
-sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1))
+l_exp = sum(Fun(x->log(abs(lan'(x))),0..1.) * rho)
+sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1.))
 L_lan = Transfer(lan)
 K = SolutionInv(L_lan);
 @time rho = acim(K);
 @time l_exp = lyapunov(K)
-@time l_exp2 = sum(Fun(x->log(abs(lan'(x))),0..1) * rho)
-@time sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1))
+@time l_exp2 = sum(Fun(x->log(abs(lan'(x))),0..1.) * rho)
+@time sigmasq_A = birkhoffvar(K,Fun(x->x^2,0..1.))
 
 @test l_exp ≈ 0.657661780006597677541582
 @test l_exp2 ≈ 0.657661780006597677541582
@@ -76,17 +76,17 @@ K = SolutionInv(L_lan);
 # modulomap test
 println("Modulomap and examples test")
 lan_lift(x) = 5x/2 - x^2/2
-lan = modulomap(lan_lift,0..1);
+lan = modulomap(lan_lift,0..1.);
 @test Transfer(lan)[1:100,1:100] ≈ L_lan[1:100,1:100]
-@test diag(Transfer(doubling(PeriodicInterval(6.,7.)))[1:10,1:10]) ≈ [1.;zeros(9)]
+@test diag(Transfer(doubling(PeriodicSegment(6.,7.)))[1:10,1:10]) ≈ [1.;zeros(9)]
 @test diag(Transfer(tupling(-4,0..4.))[1:10,1:10]) ≈ (-1/4).^(0:9)
 
 # @test diag(Transfer(modulomap(x->1-x/5,0..1,dir=Reverse))[1:10,1:10]) .≈ (-0.2).^(0:9)
 
 # Composing test
 println("Composition test 🎼")
-shiftmap = modulomap(x->5x+30,0..1,30..35)
-lanshift = modulomap(x->5(x/5-6)/2-(x/5-6)^2/2,30..35,0..1)
+shiftmap = modulomap(x->5x+30,0..1.,30..35.)
+lanshift = modulomap(x->5(x/5-6)/2-(x/5-6)^2/2,30..35.,0..1.)
 @time doublelan = lan ∘ lanshift ∘ shiftmap
 println("Should be ≤0.07s")
 doubleK = SolutionInv(doublelan)
@@ -96,7 +96,7 @@ println("Should be ≤0.4s")
 @test doublerho ≈ rho
 @test lyapunov(doubleK) ≈ 2l_exp
 
-lanpet = perturb(lan,sinpi,-0.1)∘inv(perturb(0..1,sinpi,-0.1))
+lanpet = perturb(lan,sinpi,-0.1)∘inv(perturb(0..1.,sinpi,-0.1))
 @test lyapunov(lanpet) ≈ l_exp
 @time lyapunov(lanpet)
 println("Should be ≤0.01s")
@@ -120,7 +120,7 @@ cs1f = correlationsum(M1f,A1)
 @test maximum(abs.(cs1f.(pts)-correlationsum(M2f,A2).(pts))) .< 2000eps(1.)
 
 println("Correlation function test")
-A = Fun(x->x^2,0..1); B = Fun(sin,0..1)
+A = Fun(x->x^2,0..1.); B = Fun(sin,0..1.)
 cA,cB = covariancefunction(lan,A,B)
 @test sum(cA)+sum(cB[2:end]) ≈ birkhoffcov(lan,A,B)
 @time covariancefunction(lan,A,B)
@@ -134,7 +134,7 @@ covariancefunction(lan,A,100)
 
 # Calling
 println("Newton's method test ☏")
-test_f = range(d2.a,stop=d2.b,length=20)[1:end-1] # map boundaries are dodgy because multivalued
+test_f = range(leftendpoint(d2),stop=rightendpoint(d2),length=20)[1:end-1] # map boundaries are dodgy because multivalued
 test_x = [Poltergeist.mapinv(M2b,1,tf) for tf in test_f]
  @test M2b.(test_x) ≈ test_f
  @test M1b.(test_x) ≈ test_f
@@ -142,9 +142,11 @@ test_x = [Poltergeist.mapinv(M2b,1,tf) for tf in test_f]
 
 # #Inducing
 println("Inducing tests 🐴")
-f = IntervalMap([x->φ*x,x->φ*x-1],[0..φ-1,φ-1..1],0..1)
+f = IntervalMap([x->φ*x,x->φ*x-1],[0..φ-1,φ-1..1],0..1.)
 # r = e-2
-he = hofbauerextension(f,Segment(φ-1..1),forcereturn=true)
+he = hofbauerextension(f,Interval(φ-1..1),forcereturn=true)
+println(he)
+println(he.hdomains)
 @test nv(he) == 2
 @test ne(he) == 3
 fi = InducedMap(he)
@@ -152,7 +154,7 @@ Lfi = Transfer(fi)
 @time Lfi[:,10]
 println("Should be ≤ ? s")
 # println(diag(Lfi[1:10,1:10]), 1 ./ (φ.^(1:10) - 1) ./ φ.^(1:10))
-@test all(diag(Lfi[1:10,1:10]) .≈ 1 ./ (φ.^(1:10) - 1) ./ φ.^(1:10))
+@test all(diag(Lfi[1:10,1:10]) .≈ 1 ./ (φ.^(1:10) .- 1) ./ φ.^(1:10))
 # M2bd = MarkovMap([fv1,fv2],[0..0.5,0.5..1],d2,dir=Reverse,diff=[fv1d,fv2d]);
 # M2bi = induce(M2bd,1)
 # # acim(M2bi)
@@ -182,8 +184,8 @@ println("Should be ≤2s")
 #   println("α = $α")
 #   @time b = NeutralBranch(x->1+2^α*x,x->2^α,α,0.6/2^α,Interval(0,0.5),Interval(0,1))
 #   # @time b = NeutralBranch(x->1+2^α*x,x->2^α,α,0.6/2^α,Interval(0,0.5),Interval(0,1))
-#   b2 = branch(x->(x+1)/2,x->0.5,Segment(0.5,1.),Segment(0.,1.),dir="rev")
-#   Mint = MarkovMap(Segment(0.,1),Segment(0.,1),[b,b2])
+#   b2 = branch(x->(x+1)/2,x->0.5,Interval(0.5,1.),Interval(0.,1.),dir="rev")
+#   Mint = MarkovMap(Interval(0.,1),Interval(0.,1),[b,b2])
 #
 #   Mint_I = induce(Mint,1)
 #   ρint = acim(Transfer(Mint_I))
@@ -201,7 +203,7 @@ println("Should be ≤2s")
 # using StaticArrays
 # standardmap_inv_lift(x::SVector) = SVector(x[1] - 0.1*sin(x[2] - x[1]),x[2]-x[1]);
 # standardmap_inv_diff(x::SVector) = SMatrix{2,2}(1,0,0,1); # As only determinant is important...
-# dom = PeriodicInterval()^2
+# dom = PeriodicSegment()^2
 #  # binv = branch(standardmap_inv_lift,standardmap_inv_diff,dom,dom,dir="rev"); # deprecated
 # binv= branch(standardmap_inv_lift,dom,dom,standardmap_inv_diff,dir=Reverse)
 # standardmap = MarkovMap([binv],dom,dom)

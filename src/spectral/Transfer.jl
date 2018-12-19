@@ -85,8 +85,8 @@ transferfunction_nodes(L::ConcreteTransfer{TT,D,R,M},n::Integer,kk) where {TT,D,
 
 
 function transfer_getindex(L::ConcreteTransfer{T},
-    jdat::Tuple{Integer,Integer,Union{Integer,Infinity{Bool}}},
-    k::AbstractRange,padding::Bool=false) where T
+    jdat::Tuple{Integer,Integer,Union{Integer,Infinity}},
+    k::OrdinalRange,padding::Bool=false) where T
   Tr = real(T)
   @compat dat = Array{T}(undef,0)
   @compat cols = Array{eltype(k)}(undef,Base.length(k)+1)
@@ -159,7 +159,7 @@ function transfer_getindex(L::ConcreteTransfer{T},
       abs(coeffs[i])<tol*maxabsc*log2(lcfc)/10 && (coeffs[i] = 0)
     end
 
-    cutcfc = coeffs[(jdat[1]:jdat[2]:min(lcfc,jdat[3]))::AbstractRange]
+    cutcfc = coeffs[(jdat[1]:jdat[2]:min(lcfc,jdat[3]))::OrdinalRange]
 
     K = max(K,length(cutcfc))
     padding && ApproxFun.pad!(cutcfc,K)
@@ -172,15 +172,14 @@ function transfer_getindex(L::ConcreteTransfer{T},
   RaggedMatrix(dat,cols,K)
 end
 
-Base.getindex(L::ConcreteTransfer,j::AbstractRange,k::AbstractRange) = transfer_getindex(L,(start(j),step(j),last(j)),k)
-Base.getindex(L::ConcreteTransfer,j::Colon,k::AbstractRange) = transfer_getindex(L,(1,1,ApproxFun.∞),k)
-Base.getindex(L::ConcreteTransfer,j::ApproxFun.AbstractCount,k::AbstractRange) = transfer_getindex(L,(start(j),step(j),ApproxFun.∞),k)
+Base.getindex(L::ConcreteTransfer,j::OrdinalRange,k::OrdinalRange) = transfer_getindex(L,(start(j),step(j),last(j)),k)
+Base.getindex(L::ConcreteTransfer,j::Colon,k::OrdinalRange) = transfer_getindex(L,(1,1,ApproxFun.∞),k)
 Base.getindex(L::ConcreteTransfer,j::Integer,k::Integer) = Base.getindex(L,j:j,k:k)[1,1]
-Base.getindex(L::ConcreteTransfer,j::Integer,k::AbstractRange) = Base.getindex(L,j:j,k).data
-Base.getindex(L::ConcreteTransfer,j::AbstractRange,k::Integer) = Base.getindex(L,j,k:k).data
+Base.getindex(L::ConcreteTransfer,j::Integer,k::OrdinalRange) = Base.getindex(L,j:j,k).data
+Base.getindex(L::ConcreteTransfer,j::OrdinalRange,k::Integer) = Base.getindex(L,j,k:k).data
 
 Base.convert(::Type{RaggedMatrix},S::ApproxFun.SubOperator{T,LL,Tuple{R1,R2}}) where
-        {T,LL<:AbstractTransfer,R1<:Union{AbstractRange,ApproxFun.AbstractCount},R2<:AbstractRange} =
+        {T,LL<:AbstractTransfer,R1<:OrdinalRange,R2<:OrdinalRange} =
   Base.getindex(parent(S),parentindexes(S)[1],parentindexes(S)[2])
 
 
@@ -216,7 +215,7 @@ function ApproxFun.colstop(co::ApproxFun.CachedOperator{T,DM,CT},n::Integer) whe
 end
 
 # # fast colstop for cached operators
-# function ApproxFun.colstop{T,M<:ConcreteTransfer,DS<:Space,RS<:Space}(B::ApproxFun.CachedOperator{T,RaggedMatrix{T},M,DS,RS,Tuple{Infinity{Bool}}},k::Integer)
+# function ApproxFun.colstop{T,M<:ConcreteTransfer,DS<:Space,RS<:Space}(B::ApproxFun.CachedOperator{T,RaggedMatrix{T},M,DS,RS,Tuple{Infinity},k::Integer)
 #   ApproxFun.resizedata!(B,:,k)
 #   ApproxFun.colstop(co.op,k)
 # end

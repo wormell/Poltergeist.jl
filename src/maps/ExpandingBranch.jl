@@ -67,15 +67,15 @@ unsafe_mapinvP(b::RevExpandingBranch,x) = (unsafe_mapinv(b,x),unsafe_mapinvD(b,x
 
 for B in (FwdExpandingBranch,RevExpandingBranch)
   for (M,UNS_M) in ((:mapinv,:unsafe_mapinv),(:mapinvD,:unsafe_mapinvD),(:mapinvP,:unsafe_mapinvP))
-    @eval $M(b::$B,x) = begin @assert in(x,rangedomain(b)); $UNS_M(b,x); end
+    @eval $M(b::$B,x) = begin @assert approx_in(x,rangedomain(b)); $UNS_M(b,x); end # TODO: sort out approx_in stuff
   end
 
-  # we are assuming that domains are unoriented
-  @eval (b::$B)(x::Segment) = Segment(sort(b.(∂(x)))...)
+  @eval (b::$B)(x::T) where T<:AbstractInterval = #begin println(leftendpoint(x)); println(rightendpoint(x));
+    T(extrema((b(leftendpoint(x)),b(rightendpoint(x))))...) # end
   #@eval (b::$B)(x::Interval) = Interval(sort(b.(extrema(x)))...)
 end
 
-mapinv(b::ExpandingBranch,x::Segment) = Segment((mapinv.(b,∂(x)))...)
+mapinv(b::ExpandingBranch,x::T) where T<:AbstractInterval = T(extrema((mapinv(b,leftendpoint(x)),mapinv(b,rightendpoint(x))))...)
 # mapinv(b::ExpandingBranch,x::Interval) = Interval(sort(mapinv.(b,extrema(x)))...)
 
 
@@ -101,8 +101,6 @@ function autodiff_dual(f,bi)
   fd
 end
 
-@compat const DomainInput = Union{Domain,IntervalSets.AbstractInterval}
-
 function branch(f,dom,ran,diff=autodiff(f,(dir==Forward ? dom : ran));dir=Forward,
                       ftype=typeof(f),difftype=typeof(diff))
   domd = convert(Domain,dom); randm  = convert(Domain,ran);
@@ -115,9 +113,9 @@ branch(f,dom,ran,diff::Nothing; dir =Forward) = branch(f,dom,ran;dir=dir)
 
 
 for TYP in (:FwdExpandingBranch,:RevExpandingBranch,:NeutralBranch)
-  @eval (b::$TYP)(x) = temp_in(x,b.domain) ? unsafe_call(b,x) : error("DomainError: $x ∉ $(b.domain)")
-  @eval mapD(b::$TYP,x) = temp_in(x,b.domain) ? unsafe_mapD(b,x) : error("DomainError: $x ∉ $(b.domain)")
-  @eval mapP(b::$TYP,x) = temp_in(x,b.domain) ? unsafe_mapP(b,x) : error("DomainError: $x ∉ $(b.domain)")
+  @eval (b::$TYP)(x) = x ∈ b.domain ? unsafe_call(b,x) : error("DomainError: $x ∉ $(b.domain)")
+  @eval mapD(b::$TYP,x) = x ∈ b.domain ? unsafe_mapD(b,x) : error("DomainError: $x ∉ $(b.domain)")
+  @eval mapP(b::$TYP,x) = x ∈ b.domain ? unsafe_mapP(b,x) : error("DomainError: $x ∉ $(b.domain)")
   @eval domain(b::$TYP) = b.domain
   @eval rangedomain(b::$TYP) = b.rangedomain
 end
@@ -126,8 +124,8 @@ end
 
 function transferbranch_int_edges(x,y,b::ExpandingBranch)
   x ∈ rangedomain(b) && y ∈ rangedomain(b) && (return x,y)
-  iv = Segment(x,y)∩rangedomain(b)
-  iv.a, iv.b
+  iv = Interval(x,y)∩rangedomain(b)
+  leftendpoint(iv), rightendpoint(iv)
 end
 
 function transferbranch(x,b::ExpandingBranch,f)

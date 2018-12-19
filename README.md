@@ -13,7 +13,7 @@ As an example, take your favourite Markov interval map and give it digital form:
 
 ```julia
 using Poltergeist, ApproxFun
-d = Segment(0,1)
+d = 0..1.
 f1 = 2x+sin(2pi*x)/6; f2(x) = 2-2x
 f = MarkovMap([f1,f2],[0..0.5,0.5..1])
 f(0.25), f'(0.25)
@@ -23,7 +23,7 @@ f(0.25), f'(0.25)
 Similarly, take a circle map, or maps defined by modulo or inverse:
 
 ```julia
-c = CircleMap(x->4x + sin(2pi*x)/2pi,PeriodicInterval(0,1))
+c = CircleMap(x->4x + sin(2pi*x)/2pi,PeriodicSegment(0,1))
 lanford = modulomap(x->2x+x*(1-x)/2,0..1) # Or call lanford()
 doubling = MarkovMap([x->x/2,x->(x+1)/2],[0..0.5,0.5..1],dir=Reverse) # or doubling(0..1)
 ```

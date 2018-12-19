@@ -1,6 +1,6 @@
 # MarkovMaps
 function inv(m::MarkovMap)
-  ~isa(domain(m),IntervalDomain) && error("Non-interval domains not supported")
+  ~isa(domain(m),AbstractInterval) && error("Non-interval domains not supported")
   nbranches(m) > 1 && error("Cannot invert map with multiple branches")
   domain(m.branches[1]) != domain(m) && error("Cannot invert map that isn't defined everywhere")
   unsafe_inv(m)
