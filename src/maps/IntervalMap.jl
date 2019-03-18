@@ -97,9 +97,9 @@ function IntervalMap(fs::AbstractVector,ds::AbstractVector,
           diff=[autodiff(fs[i],(dir==Forward ? ds[i] : ran)) for i in eachindex(fs)])
   rand = convert(Domain,ran)
   @assert length(fs) == length(ds)
-  println(rand)
-  println(extrema(mapinterval.(fs[1],ds[1])))
-  println((approx_issubset(mapinterval(fs[i],ds[i]),rand) for i in eachindex(fs))|>collect)
+  # println(rand)
+  # println(extrema(mapinterval(fs[1],ds[1])))
+  # println((approx_issubset(mapinterval(fs[i],ds[i]),rand) for i in eachindex(fs))|>collect)
   @assert all(approx_issubset(mapinterval(fs[i],ds[i]),rand) for i in eachindex(fs))
   IntervalMap([branch(fs[i],convert(Domain,ds[i]),mapinterval(fs[i],ds[i]),diff[i];dir=dir,ftype=eltype(fs),difftype=eltype(diff)) for i in eachindex(fs)],
         coveringinterval(ds),rand)
