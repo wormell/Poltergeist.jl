@@ -13,7 +13,7 @@ fv1d(x) = 1/2+cos(2pi*x)/4; fv2d = fv1d
 # Periodic domain
 println("Fourier tests 🌚🌞")
 d1 = PeriodicSegment(0,1.)
-M1b = CircleMap(fv1,d1,dir="rev",diff=fv1d)
+M1b = CircleMap(fv1,d1,dir=Reverse,diff=fv1d)
 L1b = Transfer(M1b)
 @time L1b = Transfer(M1b)
 K1b = SolutionInv(L1b)
@@ -47,6 +47,7 @@ acim(M2f)
 @time ρ2f = acim(M2f)
 println("Should be ≤0.12s")
 
+@assert acim(MarkovMap(M1f)) ≈ ρ2f
 pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
 @test maximum(abs.(ρ1f.(pts) - ρ2f.(pts))) < 2000eps(1.)
 @test maximum(abs.(ρ1b.(pts) - ρ2b.(pts))) < 2000eps(1.)
@@ -104,7 +105,7 @@ println("Should be ≤0.01s")
 # @time lyapunov(lanpet)
 
 # Eigvals test
-println("Eigenvalue test 🔢")
+println("Eigendata test 🔢")
 c = 1/π
 intervalmap = MarkovMap([x->sin(c*asin(x)),x->sin(c+(1-c)*asin(x))],[0..sin(c),sin(c)..sin(1.)],dir=Reverse)
 eigs(intervalmap,100)
