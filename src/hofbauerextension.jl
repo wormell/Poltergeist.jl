@@ -164,7 +164,11 @@ function towerwalk!(G::HofbauerExtension, graphind, hdom)
     end
 end
 
-function towerextend!(G::HofbauerExtension, graphind, hdom, newdom, branchind, isnfp)
+
+towerextend!(G::HofbauerExtension, graphind, hdom, newdom, branchind, isnfp) =
+    isempty(newdom) ? true : actual_towerextend!(G::HofbauerExtension, graphind, hdom, newdom, branchind, isnfp)
+
+function actual_towerextend!(G::HofbauerExtension, graphind, hdom, newdom, branchind, isnfp)
     arclength(newdom) < 300eps(arclength(convert(Domain,hdom))) && return true
     newgraphind = findfirst(collect(atol_isapprox(h.domain,newdom) for h in hdomains(G)))
 
@@ -179,9 +183,8 @@ function towerextend!(G::HofbauerExtension, graphind, hdom, newdom, branchind, i
     newedge = HofbauerEdge(graphind, newgraphind, branchind, isnfp)
     add_edge!(G,newedge)
 end
-function towerextend!(G::HofbauerExtension, graphind, hdom, newdom::UnionDomain, branchind, isnfp)
+function actual_towerextend!(G::HofbauerExtension, graphind, hdom, newdom::UnionDomain, branchind, isnfp)
     for d in newdom.domains
         towerextend!(G, graphind, hdom, d, branchind, isnfp)
     end
 end
-towerextend!(G::HofbauerExtension, graphind, hdom, newdom::ApproxFun.EmptyDomain, branchind, isnfp) = true

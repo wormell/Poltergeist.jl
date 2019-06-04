@@ -2,7 +2,7 @@ export Transfer, transfer#, colstop, resizedata!
 
 @compat abstract type AbstractTransfer{T} <: Operator{T} end
 
-ApproxFun.israggedbelow(L::AbstractTransfer) = true
+ApproxFunBase.israggedbelow(L::AbstractTransfer) = true
 #Base.issymmetric(L::AbstractTransfer) = false
 
 #for OP in (:(ApproxFun.domain),:rangedomain)
@@ -70,11 +70,15 @@ end
 
 
 # Transfer a fun - TODO
-function transfer(m::AbstractIntervalMap,fn)
+
+# TODO: structs for transferfunction
+function transfer(m::AbstractIntervalMap,fn, sp=Space(rangedomain(m)))
   @inline tf(x) = transferfunction(x,m,fn)
-  Fun(tf,rangespace(m)) # TODO: MarkovMaps don't have spaces
+  Fun(tf,sp)
 end
-transfer(m::AbstractIntervalMap,fn,x) = transferfunction(x,m,fn)
+transfer(L::AbstractTransfer,fn) = transfer(markovmap(L),fn,rangespace(L))
+# transfer(m::AbstractIntervalMap,fn,x) = transferfunction(x,m,fn)
+
 
 # Indexing
 
@@ -190,7 +194,7 @@ function ApproxFun.colstop(L::ConcreteTransfer,k::Integer)
   L.colstops[k]
 end
 
-function ApproxFun.resizedata!(co::ApproxFun.CachedOperator{T,RaggedMatrix{T},CT},
+function ApproxFun.resizedata!(co::CachedOperator{T,RaggedMatrix{T},CT},
     ::Colon,n::Integer) where {T<:Number,CT<:ConcreteTransfer}
   if n > co.datasize[2]
     RO = transfer_getindex(co.op,(1,1,ApproxFun.∞),(co.datasize[2]+1):n,co.padding)
@@ -208,14 +212,14 @@ function ApproxFun.resizedata!(co::ApproxFun.CachedOperator{T,RaggedMatrix{T},CT
   co
 end
 
-function ApproxFun.colstop(co::ApproxFun.CachedOperator{T,DM,CT},n::Integer) where
+function ApproxFun.colstop(co::CachedOperator{T,DM,CT},n::Integer) where
     {T<:Number,DM<:AbstractMatrix,CT<:ConcreteTransfer}
   ApproxFun.resizedata!(co,:,n)
   ApproxFun.colstop(co.data,n)
 end
 
 # # fast colstop for cached operators
-# function ApproxFun.colstop{T,M<:ConcreteTransfer,DS<:Space,RS<:Space}(B::ApproxFun.CachedOperator{T,RaggedMatrix{T},M,DS,RS,Tuple{Infinity},k::Integer)
+# function ApproxFun.colstop{T,M<:ConcreteTransfer,DS<:Space,RS<:Space}(B::CachedOperator{T,RaggedMatrix{T},M,DS,RS,Tuple{Infinity},k::Integer)
 #   ApproxFun.resizedata!(B,:,k)
 #   ApproxFun.colstop(co.op,k)
 # end

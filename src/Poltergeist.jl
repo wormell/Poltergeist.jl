@@ -2,15 +2,16 @@ __precompile__()
 
 module Poltergeist
 
-using Base, ApproxFun, BandedMatrices, Compat, DualNumbers, DomainSets, StaticArrays, LightGraphs#, PyPlot#, FastTransforms
+using Base, ApproxFun, ApproxFunBase, BandedMatrices, Compat, DualNumbers, DomainSets, StaticArrays, LightGraphs#, PyPlot#, FastTransforms
 using LinearAlgebra
 
 import Base: values,getindex,setindex!,*,+,-,==,<,<=,>,|,
-  >=,/,.^,^,\,∪,∘,transpose, size, length,  eltype, inv, mod, convert#issymmetric,
+  >=,/,^,\,∪,∘,transpose, size, length,  eltype, inv, mod, convert#issymmetric,
 @compat import LinearAlgebra: eigvals, eigvecs
-import ApproxFun: domainspace, rangespace, domain, israggedbelow, RaggedMatrix,
-  resizedata!, colstop, CachedOperator, Infinity,
+import ApproxFun: domainspace, rangespace, domain, RaggedMatrix,
+  resizedata!, colstop, Infinity,
   fromcanonicalD, tocanonicalD, fromcanonical, tocanonical, space, eigs, cfstype, prectype
+import ApproxFunBase: israggedbelow, CachedOperator
 import DomainSets: AbstractInterval, UnionDomain
 
 export (..), Interval, PeriodicSegment, Fun, eigs

@@ -1,11 +1,11 @@
 export SolutionInv
 
 # Solution wrappers
-@compat struct SolutionInvWrapper{QR<:ApproxFun.QROperator,F<:Fun,T} <: Operator{T}
+@compat struct SolutionInvWrapper{QR<:ApproxFunBase.QROperator,F<:Fun,T} <: Operator{T}
   op::QR
   u::F
 end
-SolutionInvWrapper(op::ApproxFun.QROperator,f::Fun) = SolutionInvWrapper{typeof(op),typeof(f),eltype(op)}(op,f)
+SolutionInvWrapper(op::ApproxFunBase.QROperator,f::Fun) = SolutionInvWrapper{typeof(op),typeof(f),eltype(op)}(op,f)
 ApproxFun.qr!(op::SolutionInvWrapper) = op
 ApproxFun.qr(op::SolutionInvWrapper) = op
 #SolutionInvWrapper(op::Operator) = SolutionInvWrapper(op,uniform(domainspace(op)))
