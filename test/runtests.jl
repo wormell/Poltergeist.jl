@@ -53,9 +53,10 @@ pts = [points(space(ρ1b),100);points(space(ρ2b),100)]
 @test maximum(abs.(ρ1b.(pts) - ρ2b.(pts))) < 2000eps(1.)
 @test maximum(abs.(ρ2b.(pts) - ρ2ba.(pts))) < 2000eps(1.)
 
-# # Transfer
+println("Transfer test")
 # @test transfer(M1f,x->Fun(Fourier(d1),[0.,1.])(x),0.28531) == Poltergeist.transferfunction(0.28531,M1f,Poltergeist.BasisFun(Fourier(d1),2),Float64)
-# @test transfer(M2f,exp,0.28531) ≈ (Transfer(M2f)*Fun(exp,Space(d2)))(0.28531)
+@time M2Fexp = transfer(M2f,exp)
+@test M2Fexp ≈ (Transfer(M2f)*Fun(exp,Chebyshev(d2)))
 
 println("Lanford map test")
 lan = lanford()

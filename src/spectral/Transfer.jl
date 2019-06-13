@@ -72,9 +72,13 @@ end
 # Transfer a fun - TODO
 
 # TODO: structs for transferfunction
+struct TransferFunction{M,F} <: Function
+    m::M
+    fn::F
+end
+(tf::TransferFunction)(x) = transferfunction(x,tf.m,tf.fn)
 function transfer(m::AbstractIntervalMap,fn, sp=Space(rangedomain(m)))
-  @inline tf(x) = transferfunction(x,m,fn)
-  Fun(tf,sp)
+  Fun(TransferFunction(m,fn),sp)
 end
 transfer(L::AbstractTransfer,fn) = transfer(markovmap(L),fn,rangespace(L))
 # transfer(m::AbstractIntervalMap,fn,x) = transferfunction(x,m,fn)
