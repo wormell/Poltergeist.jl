@@ -7,7 +7,7 @@ export MarkovMap, IntervalMap, branch, nbranches, modulomap, CircleMap
 #abstract AbstractDerivativeMarkovMap{D<:Domain,R<:Domain,T,FF} <: AbstractMarkovMap{D,R,T,FF}
 
 Base.show(io::IO, m::AbstractIntervalMap) = print(io, string(typeof(m).name.name)*
-    " "*string(domain(m))*"→"*string(rangedomain(m))*"with $(nbranches(m)) branches") #branches??
+    " "*string(domain(m))*" → "*string(rangedomain(m))*" with $(nbranches(m)) branches") #branches??
 prectype(m::AbstractIntervalMap) = promote_type(prectype(domain(m)),prectype(rangedomain(m)))
 eltype(m::AbstractMarkovMap) = promote_type(eltype(domain(m)),eltype(rangedomain(m)))
 

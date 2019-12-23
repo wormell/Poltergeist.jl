@@ -181,7 +181,7 @@ function transfer_getindex(L::ConcreteTransfer{T},
 end
 
 Base.getindex(L::ConcreteTransfer,j::OrdinalRange,k::OrdinalRange) = transfer_getindex(L,(start(j),step(j),last(j)),k)
-Base.getindex(L::ConcreteTransfer,j::Colon,k::OrdinalRange) = transfer_getindex(L,(1,1,ApproxFun.∞),k)
+Base.getindex(L::ConcreteTransfer,j::Colon,k::OrdinalRange) = transfer_getindex(L,(1,1,InfiniteArrays.∞),k)
 Base.getindex(L::ConcreteTransfer,j::Integer,k::Integer) = Base.getindex(L,j:j,k:k)[1,1]
 Base.getindex(L::ConcreteTransfer,j::Integer,k::OrdinalRange) = Base.getindex(L,j:j,k).data
 Base.getindex(L::ConcreteTransfer,j::OrdinalRange,k::Integer) = Base.getindex(L,j,k:k).data
@@ -192,16 +192,16 @@ Base.convert(::Type{RaggedMatrix},S::ApproxFun.SubOperator{T,LL,Tuple{R1,R2}}) w
 
 
 
-function ApproxFun.colstop(L::ConcreteTransfer,k::Integer)
+function BandedMatrices.colstop(L::ConcreteTransfer,k::Integer)
   k <= length(L.colstops) && L.colstops[k] != -1 && return L.colstops[k]
-  transfer_getindex(L,(1,1,ApproxFun.∞),k:k)
+  transfer_getindex(L,(1,1,Infinity),k:k)
   L.colstops[k]
 end
 
 function ApproxFun.resizedata!(co::CachedOperator{T,RaggedMatrix{T},CT},
     ::Colon,n::Integer) where {T<:Number,CT<:ConcreteTransfer}
   if n > co.datasize[2]
-    RO = transfer_getindex(co.op,(1,1,ApproxFun.∞),(co.datasize[2]+1):n,co.padding)
+    RO = transfer_getindex(co.op,(1,1,InfiniteArrays.∞),(co.datasize[2]+1):n,co.padding)
     if co.datasize[2] == 0
       co.data = RO
       co.datasize = (co.data.m,n)
@@ -216,14 +216,14 @@ function ApproxFun.resizedata!(co::CachedOperator{T,RaggedMatrix{T},CT},
   co
 end
 
-function ApproxFun.colstop(co::CachedOperator{T,DM,CT},n::Integer) where
+function BandedMatrices.colstop(co::CachedOperator{T,DM,CT},n::Integer) where
     {T<:Number,DM<:AbstractMatrix,CT<:ConcreteTransfer}
   ApproxFun.resizedata!(co,:,n)
-  ApproxFun.colstop(co.data,n)
+  BandedMatrices.colstop(co.data,n)
 end
 
 # # fast colstop for cached operators
-# function ApproxFun.colstop{T,M<:ConcreteTransfer,DS<:Space,RS<:Space}(B::CachedOperator{T,RaggedMatrix{T},M,DS,RS,Tuple{Infinity},k::Integer)
+# function BandedMatrices.colstop{T,M<:ConcreteTransfer,DS<:Space,RS<:Space}(B::CachedOperator{T,RaggedMatrix{T},M,DS,RS,Tuple{Infinity},k::Integer)
 #   ApproxFun.resizedata!(B,:,k)
-#   ApproxFun.colstop(co.op,k)
+#   BandedMatrices.colstop(co.op,k)
 # end

@@ -7,3 +7,4 @@ DomainSets
 DualNumbers 0.3.0
 StaticArrays 0.3
 LightGraphs 0.12
+InfiniteArrays
