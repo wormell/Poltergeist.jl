@@ -97,7 +97,7 @@ end
 
 # TODO
   struct ComposedCircleMap{M<:AbstractMarkovMap,D<:Domain,R<:Domain} <: AbstractMarkovMap{D,R}
-    maps::NTuple{M}
+    maps::Tuple{Vararg{M}}
     domain::D
     rangedomain::R
     end
