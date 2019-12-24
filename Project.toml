@@ -1,7 +1,7 @@
 name = "Poltergeist"
 uuid = "89210da2-f0be-5ef8-ba65-10393cce509d"
 authors = ["Caroline Wormell <ca.wormell@gmail.com>"]
-version = "0.3.1"
+version = "0.4.0"
 
 [deps]
 ApproxFun = "28f2ccd6-bb30-5033-b560-165f7b14dc2f"
@@ -16,14 +16,14 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-ApproxFun = "≥ 0.11.0"
-ApproxFunBase = "≥ 0.1.0"
-BandedMatrices = "≥ 0.2.0"
-Compat = "≥ 0.31.0"
-DualNumbers = "≥ 0.3.0"
-LightGraphs = "≥ 0.12.0"
-StaticArrays = "≥ 0.3.0"
-julia = "≥ 1.0.0"
+ApproxFun = "~0.11"
+ApproxFunBase = "~0.2"
+BandedMatrices = "~0"
+Compat = "~2.2"
+DualNumbers = "~0.6"
+LightGraphs = "~1.3"
+StaticArrays = "~0.12"
+julia = "~1"
 
 [extras]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
