@@ -17,7 +17,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 ApproxFun = "~0.10,~0.11"
-ApproxFunBase = "~0.2,0.3"
+ApproxFunBase = "~0.2,0.3, 0.7"
 BandedMatrices = "~0"
 Compat = "^2.2,^3"
 DomainSets = "~0.1"
